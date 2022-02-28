@@ -1,0 +1,51 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32210.238
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "yay_see_sharp.application", "source\yay_see_sharp.application\yay_see_sharp.application.csproj", "{C9C500C5-EA75-481D-BAC8-348EFE38AAC0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{72A34FEF-412D-4034-BB17-D0F617EF2128}"
+	ProjectSection(SolutionItems) = preProject
+		.gitattributes = .gitattributes
+		.gitignore = .gitignore
+		LICENSE = LICENSE
+		README.md = README.md
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "yay_see_sharp.build", "build\yay_see_sharp.build\yay_see_sharp.build.csproj", "{54B1F397-EFAE-4E0E-9828-5A5355F0B825}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "yay_see_sharp.unittests", "tests\yay_see_sharp.unittests\yay_see_sharp.unittests.csproj", "{C0551A58-9D4C-41B0-BF3A-28FE243A60F7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "yay_see_sharp.bddtests", "tests\yay_see_sharp.bddtests\yay_see_sharp.bddtests.csproj", "{DB3AA5BF-774E-4AD6-98E0-66D3B8C7729E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C9C500C5-EA75-481D-BAC8-348EFE38AAC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C9C500C5-EA75-481D-BAC8-348EFE38AAC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C9C500C5-EA75-481D-BAC8-348EFE38AAC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C9C500C5-EA75-481D-BAC8-348EFE38AAC0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54B1F397-EFAE-4E0E-9828-5A5355F0B825}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54B1F397-EFAE-4E0E-9828-5A5355F0B825}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54B1F397-EFAE-4E0E-9828-5A5355F0B825}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54B1F397-EFAE-4E0E-9828-5A5355F0B825}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C0551A58-9D4C-41B0-BF3A-28FE243A60F7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C0551A58-9D4C-41B0-BF3A-28FE243A60F7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C0551A58-9D4C-41B0-BF3A-28FE243A60F7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C0551A58-9D4C-41B0-BF3A-28FE243A60F7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB3AA5BF-774E-4AD6-98E0-66D3B8C7729E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB3AA5BF-774E-4AD6-98E0-66D3B8C7729E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB3AA5BF-774E-4AD6-98E0-66D3B8C7729E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB3AA5BF-774E-4AD6-98E0-66D3B8C7729E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {135A8FFF-36B8-41A5-927E-B20A55B587B7}
+	EndGlobalSection
+EndGlobal
