@@ -8,5 +8,14 @@ namespace yay_see_sharp.application.Views
         {
             InitializeComponent();
         }
+
+        protected override void HandleWindowStateChanged(WindowState state)
+        {
+            if (state == WindowState.Minimized)
+            {
+                Hide();
+            }
+            base.HandleWindowStateChanged(state);
+        }
     }
 }

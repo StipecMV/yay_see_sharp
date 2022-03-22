@@ -6,12 +6,15 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="yay_see_sharp.application.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
-        Title="yay_see_sharp.application">
+        Title="{Binding ApplicationName}">
 
     <Design.DataContext>
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <StackPanel>
+        <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    </StackPanel>
+
 
 </Window>

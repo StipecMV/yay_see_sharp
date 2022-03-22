@@ -5,12 +5,17 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using yay_see_sharp.application.Properties;
+using yay_see_sharp.application.Extenstions;
+using yay_see_sharp.application.Helpers;
 
 namespace yay_see_sharp.application.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
         public string Greeting => "Welcome to Avalonia!";
+
+        public string ApplicationName => Constants.GetApplicationName();
 
         public MainWindowViewModel()
         {
