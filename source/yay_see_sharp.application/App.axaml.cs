@@ -67,9 +67,6 @@ namespace yay_see_sharp.application
             {
                 myMainWindow.WindowState = WindowState.Normal;
                 myMainWindow.Show();
-                myMainWindow.BringIntoView();
-                myMainWindow.Activate();
-                myMainWindow.Focus();
             }
         }
     }

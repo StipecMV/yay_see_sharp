@@ -19,15 +19,15 @@ namespace yay_see_sharp.application.ViewModels
 
         public MainWindowViewModel()
         {
-            var output = new StringBuilder();
-            var result = Cli.Wrap("cmd")
-                .WithWorkingDirectory(@"C:\Users\miros")
-                .WithArguments("/C dir")
-                //.WithArguments(command => command.Add("/C dir"))
-                .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
-                .ExecuteAsync();
-            //var data = result.GetAwaiter().GetResult().StandardOutput;
-            var value = output.ToString();
+            //var output = new StringBuilder();
+            //var result = Cli.Wrap("cmd")
+            //    .WithWorkingDirectory(@"C:\Users\miros")
+            //    .WithArguments("/C dir")
+            //    //.WithArguments(command => command.Add("/C dir"))
+            //    .WithStandardOutputPipe(PipeTarget.ToStringBuilder(output))
+            //    .ExecuteAsync();
+            ////var data = result.GetAwaiter().GetResult().StandardOutput;
+            //var value = output.ToString();
 
 
 
