@@ -23,8 +23,8 @@ namespace yay_see_sharp.application.Views
                 this.BringIntoView();
                 Activate();
                 Focus();
+                base.HandleWindowStateChanged(state);
             }
-            base.HandleWindowStateChanged(state);
         }
     }
 }
