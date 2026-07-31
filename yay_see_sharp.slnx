@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="source/yay_see_sharp.application/yay_see_sharp.application.csproj" />
+  <Project Path="tests/yay_see_sharp.unittests/yay_see_sharp.unittests.csproj" />
+</Solution>

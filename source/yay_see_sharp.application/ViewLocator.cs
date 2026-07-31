@@ -7,8 +7,13 @@ namespace yay_see_sharp.application
 {
     public class ViewLocator : IDataTemplate
     {
-        public IControl Build(object data)
+        public Control? Build(object? data)
         {
+            if (data is null)
+            {
+                return null;
+            }
+
             var name = data.GetType().FullName!.Replace("ViewModel", "View");
             var type = Type.GetType(name);
 
@@ -22,7 +27,7 @@ namespace yay_see_sharp.application
             }
         }
 
-        public bool Match(object data)
+        public bool Match(object? data)
         {
             return data is ViewModelBase;
         }
