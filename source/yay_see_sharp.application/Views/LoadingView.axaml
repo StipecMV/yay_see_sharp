@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:yay_see_sharp.application.ViewModels"
+             xmlns:icons="using:yay_see_sharp.application.Views.Icons"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+             x:Class="yay_see_sharp.application.Views.LoadingView"
+             x:DataType="vm:LoadingViewModel"
+             Background="{DynamicResource Brush.Background}">
+
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
+        <icons:LogoMark Size="60" HorizontalAlignment="Center"/>
+        <StackPanel HorizontalAlignment="Center" Spacing="10">
+            <TextBlock Text="Yay See Sharp" FontSize="15" FontWeight="Medium"
+                       Foreground="{DynamicResource Brush.Text}" HorizontalAlignment="Center"/>
+            <ProgressBar Width="160" Height="3" IsIndeterminate="True"
+                         Background="{DynamicResource Brush.Divider}"
+                         Foreground="{DynamicResource Brush.Accent}"/>
+            <TextBlock Text="{Binding StatusLabel}" FontSize="12"
+                       Foreground="{DynamicResource Brush.TextMuted}" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </StackPanel>
+
+</UserControl>

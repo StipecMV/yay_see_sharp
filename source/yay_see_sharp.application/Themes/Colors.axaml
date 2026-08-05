@@ -1,0 +1,97 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="Color.Background">#0e0f18</Color>
+      <Color x:Key="Color.Surface">#232532</Color>
+      <Color x:Key="Color.Sidebar">#1c1e2b</Color>
+      <Color x:Key="Color.Scrim">#161826</Color>
+
+      <Color x:Key="Color.Text">#e9e9ed</Color>
+      <Color x:Key="Color.TextMuted">#9ee9e9ed</Color>
+      <Color x:Key="Color.TextFaint">#6be9e9ed</Color>
+
+      <Color x:Key="Color.Divider">#24e9e9ed</Color>
+      <Color x:Key="Color.RowFill">#0ae9e9ed</Color>
+
+      <Color x:Key="Color.Accent">#9184d9</Color>
+      <Color x:Key="Color.AccentTint">#299184d9</Color>
+
+      <Color x:Key="Color.Destructive">#d99b91</Color>
+
+      <Color x:Key="Color.TagNeutralBg">#17e9e9ed</Color>
+      <Color x:Key="Color.TagNeutralFg">#b3e9e9ed</Color>
+      <Color x:Key="Color.TagAccentBg">#423a6a</Color>
+      <Color x:Key="Color.TagAccentFg">#d2cefd</Color>
+
+      <Color x:Key="Color.ScrimBackdrop">#99161826</Color>
+
+      <BoxShadows x:Key="Shadow.Md">0 0 0 1 #3f424d, 0 6 18 0 #80000000</BoxShadows>
+      <BoxShadows x:Key="Shadow.Lg">0 0 0 1 #3f424d, 0 16 40 0 #99000000</BoxShadows>
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Light">
+      <Color x:Key="Color.Background">#eeecf6</Color>
+      <Color x:Key="Color.Surface">#fdfcff</Color>
+      <Color x:Key="Color.Sidebar">#f1eff9</Color>
+      <Color x:Key="Color.Scrim">#dedaf0</Color>
+
+      <Color x:Key="Color.Text">#232332</Color>
+      <Color x:Key="Color.TextMuted">#9e232332</Color>
+      <Color x:Key="Color.TextFaint">#6b232332</Color>
+
+      <Color x:Key="Color.Divider">#1f232332</Color>
+      <Color x:Key="Color.RowFill">#0a232332</Color>
+
+      <Color x:Key="Color.Accent">#6d61b8</Color>
+      <Color x:Key="Color.AccentTint">#1a6d61b8</Color>
+
+      <Color x:Key="Color.Destructive">#a8493a</Color>
+
+      <Color x:Key="Color.TagNeutralBg">#0f232332</Color>
+      <Color x:Key="Color.TagNeutralFg">#a6232332</Color>
+      <Color x:Key="Color.TagAccentBg">#e7e5fe</Color>
+      <Color x:Key="Color.TagAccentFg">#5d5294</Color>
+
+      <Color x:Key="Color.ScrimBackdrop">#59232332</Color>
+
+      <BoxShadows x:Key="Shadow.Md">0 0 0 1 #d8d4e6, 0 6 18 0 #24232332</BoxShadows>
+      <BoxShadows x:Key="Shadow.Lg">0 0 0 1 #d8d4e6, 0 16 40 0 #33232332</BoxShadows>
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Brushes bind to the color tokens above and follow the active ThemeVariant automatically. -->
+  <SolidColorBrush x:Key="Brush.Background" Color="{DynamicResource Color.Background}"/>
+  <SolidColorBrush x:Key="Brush.Surface" Color="{DynamicResource Color.Surface}"/>
+  <SolidColorBrush x:Key="Brush.Sidebar" Color="{DynamicResource Color.Sidebar}"/>
+  <SolidColorBrush x:Key="Brush.Scrim" Color="{DynamicResource Color.Scrim}"/>
+
+  <SolidColorBrush x:Key="Brush.Text" Color="{DynamicResource Color.Text}"/>
+  <SolidColorBrush x:Key="Brush.TextMuted" Color="{DynamicResource Color.TextMuted}"/>
+  <SolidColorBrush x:Key="Brush.TextFaint" Color="{DynamicResource Color.TextFaint}"/>
+
+  <SolidColorBrush x:Key="Brush.Divider" Color="{DynamicResource Color.Divider}"/>
+  <SolidColorBrush x:Key="Brush.RowFill" Color="{DynamicResource Color.RowFill}"/>
+
+  <SolidColorBrush x:Key="Brush.Accent" Color="{DynamicResource Color.Accent}"/>
+  <SolidColorBrush x:Key="Brush.AccentTint" Color="{DynamicResource Color.AccentTint}"/>
+
+  <SolidColorBrush x:Key="Brush.Destructive" Color="{DynamicResource Color.Destructive}"/>
+
+  <SolidColorBrush x:Key="Brush.TagNeutralBg" Color="{DynamicResource Color.TagNeutralBg}"/>
+  <SolidColorBrush x:Key="Brush.TagNeutralFg" Color="{DynamicResource Color.TagNeutralFg}"/>
+  <SolidColorBrush x:Key="Brush.TagAccentBg" Color="{DynamicResource Color.TagAccentBg}"/>
+  <SolidColorBrush x:Key="Brush.TagAccentFg" Color="{DynamicResource Color.TagAccentFg}"/>
+
+  <SolidColorBrush x:Key="Brush.ScrimBackdrop" Color="{DynamicResource Color.ScrimBackdrop}"/>
+
+  <FontFamily x:Key="Font.Default">Inter,Segoe UI,Ubuntu,Cantarell,sans-serif</FontFamily>
+  <FontFamily x:Key="Font.Monospace">Cascadia Code,Consolas,Menlo,monospace</FontFamily>
+
+  <x:Double x:Key="Radius.Sm">8</x:Double>
+  <x:Double x:Key="Radius.Lg">14</x:Double>
+
+</ResourceDictionary>

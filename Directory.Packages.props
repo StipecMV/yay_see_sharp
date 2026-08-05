@@ -1,0 +1,34 @@
+<Project>
+  <ItemGroup>
+    <!--
+      Avalonia core packages track 12.x (latest stable). Avalonia.ReactiveUI has not published a
+      12.x release yet upstream — 11.3.9 (its latest available version) is used as a best-effort
+      match; it is a thin AppBuilder.UseReactiveUI() scheduler-registration shim with no
+      dependency on Avalonia's internal rendering/control APIs, so it is expected to keep working
+      across the 11 -> 12 boundary. Avalonia.Diagnostics has no 12.x release either and, unlike
+      ReactiveUI, has no safe fallback story, so it has been dropped rather than left mismatched
+      (see the app csproj for the removal note).
+    -->
+    <PackageVersion Include="Avalonia" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageVersion Include="Avalonia.ReactiveUI" Version="11.3.9" />
+    <!--
+      Avalonia.Headless has a 12.x release matching the core packages above. There is no official
+      Avalonia.Headless.TUnit adapter (only .XUnit/.NUnit exist upstream; the one TUnit package on
+      NuGet is an unofficial third-party 0.1.x release, not something to depend on for test
+      infrastructure). Avalonia.Headless's own public HeadlessUnitTestSession type — the same
+      primitive the official XUnit/NUnit adapters are built on — is used directly instead; see
+      tests/yay_see_sharp.e2e.Tests/AvaloniaUiTest.cs.
+    -->
+    <PackageVersion Include="Avalonia.Headless" Version="12.1.1" />
+
+    <PackageVersion Include="log4net" Version="3.3.2" />
+    <PackageVersion Include="ReactiveUI.Fody" Version="19.5.41" />
+    <PackageVersion Include="Splat" Version="15.1.1" />
+    <PackageVersion Include="Splat.Log4Net" Version="14.1.45" />
+
+    <PackageVersion Include="Moq" Version="4.20.72" />
+    <PackageVersion Include="TUnit" Version="1.63.0" />
+  </ItemGroup>
+</Project>

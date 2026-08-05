@@ -1,27 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-
     <IsPackable>false</IsPackable>
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <OutputPath>..\..\output\bin\</OutputPath>
-    <IntermediateOutputPath>..\..\output\obj\</IntermediateOutputPath>
+    <IntermediateOutputPath>..\..\output\obj\yay_see_sharp.infrastructure\</IntermediateOutputPath>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Moq" Version="4.20.72" />
-    <PackageReference Include="TUnit" Version="1.63.0" />
+    <PackageReference Include="Splat" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="classes\" />
-    <Folder Include="components\" />
+    <ProjectReference Include="..\yay_see_sharp.domain\yay_see_sharp.domain.csproj" />
   </ItemGroup>
 
 </Project>

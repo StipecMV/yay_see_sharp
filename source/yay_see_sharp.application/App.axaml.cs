@@ -1,13 +1,24 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
+using ReactiveUI;
+using yay_see_sharp.application.Platform;
 using yay_see_sharp.application.ViewModels;
 using yay_see_sharp.application.Views;
+using yay_see_sharp.domain.Abstractions;
+using yay_see_sharp.domain.Models;
+using yay_see_sharp.infrastructure.Scheduling;
 
 namespace yay_see_sharp.application
 {
     public partial class App : Application
     {
+        private ISingleInstanceService? _singleInstanceService;
+        private AvaloniaTrayService? _trayService;
+        private UpdateScheduler? _updateScheduler;
+
         public override void Initialize()
         {
             AvaloniaXamlLoader.Load(this);
@@ -17,9 +28,51 @@ namespace yay_see_sharp.application
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                desktop.MainWindow = new MainWindow
+                var composition = AppBootstrapper.Bootstrap();
+                if (composition is null)
                 {
-                    DataContext = new MainWindowViewModel(),
+                    desktop.Shutdown();
+                    base.OnFrameworkInitializationCompleted();
+                    return;
+                }
+
+                _singleInstanceService = composition.SingleInstanceService;
+                _updateScheduler = composition.UpdateScheduler;
+                _trayService = composition.TrayService;
+                var viewModel = composition.ViewModel;
+
+                _updateScheduler.StartAsync().FireAndForget();
+
+                var window = new MainWindow { DataContext = viewModel };
+                desktop.MainWindow = window;
+
+                viewModel.Settings.WhenAnyValue(x => x.Theme).Subscribe(theme =>
+                {
+                    RequestedThemeVariant = theme switch
+                    {
+                        ThemePreference.Light => ThemeVariant.Light,
+                        ThemePreference.Dark => ThemeVariant.Dark,
+                        _ => ThemeVariant.Default,
+                    };
+                });
+
+                _trayService.RestoreRequested += (_, _) =>
+                {
+                    window.Show();
+                    window.WindowState = WindowState.Normal;
+                };
+                _trayService.ExitRequested += (_, _) => desktop.Shutdown();
+
+                desktop.Exit += (_, _) => _updateScheduler.StopAsync().FireAndForget();
+
+                window.Closing += (_, args) =>
+                {
+                    if (viewModel.Settings.CloseAction == CloseAction.HideToTray)
+                    {
+                        args.Cancel = true;
+                        window.Hide();
+                        _trayService.Show();
+                    }
                 };
             }
 

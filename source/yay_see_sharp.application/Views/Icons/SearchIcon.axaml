@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="yay_see_sharp.application.Views.Icons.SearchIcon"
+             x:Name="Root">
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="20" Height="20">
+      <Ellipse Canvas.Left="3" Canvas.Top="3" Width="11" Height="11"
+                StrokeThickness="1.6" Stroke="{Binding #Root.Stroke}"/>
+      <Line StartPoint="12.8,12.8" EndPoint="17,17" StrokeLineCap="Round"
+            StrokeThickness="1.6" Stroke="{Binding #Root.Stroke}"/>
+    </Canvas>
+  </Viewbox>
+</UserControl>

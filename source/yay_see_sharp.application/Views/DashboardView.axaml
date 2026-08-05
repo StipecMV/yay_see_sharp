@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:yay_see_sharp.application.ViewModels"
+             xmlns:conv="using:yay_see_sharp.application.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="560"
+             x:Class="yay_see_sharp.application.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel"
+             Background="{DynamicResource Brush.Background}">
+
+    <DockPanel>
+
+        <StackPanel DockPanel.Dock="Top" Margin="20,16,20,14" Spacing="14">
+
+            <Border IsVisible="{Binding HasNotification}"
+                    Background="{DynamicResource Brush.AccentTint}"
+                    BorderBrush="{DynamicResource Brush.Accent}" BorderThickness="1"
+                    CornerRadius="8" Padding="12,10">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <TextBlock Grid.Column="0" Text="✓" FontSize="14" Foreground="{DynamicResource Brush.Accent}" Margin="0,0,10,0"/>
+                    <TextBlock Grid.Column="1" Text="{Binding NotificationMessage}" FontSize="12.5"
+                               Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
+                    <Button Grid.Column="2" Classes="subtle" Content="×" Command="{Binding DismissNotificationCommand}"/>
+                </Grid>
+            </Border>
+
+            <Border IsVisible="{Binding DisplayErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    Background="Transparent" BorderBrush="{DynamicResource Brush.Destructive}" BorderThickness="1"
+                    CornerRadius="8" Padding="12,10">
+                <TextBlock Text="{Binding DisplayErrorMessage}" FontSize="12.5" Foreground="{DynamicResource Brush.Destructive}" TextWrapping="Wrap"/>
+            </Border>
+
+            <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{Binding WelcomeLabel}" FontSize="19" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
+                    <TextBlock Text="{Binding LastSyncedLabel}" FontSize="12.5" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Button Grid.Column="1" Classes="neutral" Content="{Binding RefreshLabel}" Command="{Binding RefreshCommand}" VerticalAlignment="Top"/>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*,*" Height="52">
+                <Border Grid.Column="0" Background="{DynamicResource Brush.Sidebar}" CornerRadius="8" Padding="12,10" Margin="0,0,5,0">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Statistics.InstalledCount}" FontSize="18" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
+                        <TextBlock Text="{Binding InstalledLabel}" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Background="{DynamicResource Brush.Sidebar}" CornerRadius="8" Padding="12,10" Margin="5,0">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Statistics.AurCount}" FontSize="18" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
+                        <TextBlock Text="{Binding AurLabel}" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}"/>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Background="{DynamicResource Brush.Sidebar}" CornerRadius="8" Padding="12,10" Margin="5,0,0,0">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Statistics.UpdatesAvailable}" FontSize="18" FontWeight="Medium" Foreground="{DynamicResource Brush.Accent}"/>
+                        <TextBlock Text="{Binding UpdatesAvailableLabel}" FontSize="11" Foreground="{DynamicResource Brush.TextMuted}"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <StackPanel Spacing="4" IsVisible="{Binding UpdateOperation, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="{Binding UpdateOperation.StageLabel}" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding UpdateOperation.Percent}" Height="4"
+                             Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"/>
+                <Button Classes="neutral" Content="{Binding UpdateOperation.CancelLabel}" Command="{Binding UpdateOperation.CancelCommand}" HorizontalAlignment="Left"/>
+            </StackPanel>
+
+        </StackPanel>
+
+        <Grid DockPanel.Dock="Top" Margin="20,6,20,8" ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Text="{Binding UpdatesLabel}" FontSize="13" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Content="{Binding UpdateAllLabel}" Command="{Binding UpdateAllCommand}" IsVisible="{Binding !HasNoUpdates}"/>
+        </Grid>
+
+        <TextBlock DockPanel.Dock="Top" Margin="20,0" Text="{Binding NoUpdatesLabel}" IsVisible="{Binding HasNoUpdates}"
+                   FontSize="12.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+
+        <ScrollViewer Margin="20,0,20,16">
+            <ItemsControl ItemsSource="{Binding UpdateItems}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="6"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:UpdateItemViewModel">
+                        <Border Background="{DynamicResource Brush.RowFill}" CornerRadius="8" Padding="10,9">
+                            <Grid ColumnDefinitions="26,*,Auto,Auto">
+                                <Border Grid.Column="0" Width="26" Height="26" CornerRadius="6"
+                                        Background="{DynamicResource Brush.AccentTint}" Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Info.Name, Converter={x:Static conv:InitialsConverter.Instance}}"
+                                               FontFamily="{DynamicResource Font.Monospace}" FontWeight="SemiBold" FontSize="10"
+                                               Foreground="{DynamicResource Brush.Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Info.Name}" FontSize="13" Foreground="{DynamicResource Brush.Text}"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <TextBlock Text="{Binding Info.CurrentVersion}" FontSize="11" FontFamily="{DynamicResource Font.Monospace}" Foreground="{DynamicResource Brush.TextFaint}"/>
+                                        <TextBlock Text="→" FontSize="11" Foreground="{DynamicResource Brush.TextFaint}"/>
+                                        <TextBlock Text="{Binding Info.AvailableVersion}" FontSize="11" FontFamily="{DynamicResource Font.Monospace}" Foreground="{DynamicResource Brush.TextFaint}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <Border Grid.Column="2" Theme="{StaticResource TagNeutral}" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Info.Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"
+                                               FontSize="10" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
+                                </Border>
+                                <Button Grid.Column="3" Classes="neutral" Content="{Binding UpdateLabel}"
+                                        Command="{Binding UpdateCommand}" CommandParameter="{Binding Info.Name}"
+                                        Padding="10,5" FontSize="11.5" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+    </DockPanel>
+
+</UserControl>

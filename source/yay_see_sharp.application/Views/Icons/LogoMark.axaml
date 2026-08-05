@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="yay_see_sharp.application.Views.Icons.LogoMark">
+  <Panel>
+    <Border x:Name="Badge"
+            BorderThickness="1.5"
+            BorderBrush="{DynamicResource Brush.Accent}"
+            Background="{DynamicResource Brush.Surface}">
+      <Panel>
+        <TextBlock x:Name="Glyph"
+                   Text="y"
+                   FontFamily="{DynamicResource Font.Monospace}"
+                   FontWeight="Bold"
+                   Foreground="{DynamicResource Brush.Text}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
+        <Viewbox x:Name="HashHost" Stretch="Uniform" HorizontalAlignment="Right" VerticalAlignment="Bottom">
+          <Canvas Width="14" Height="14">
+            <Line StartPoint="4.3,1" EndPoint="2.9,13" Stroke="{DynamicResource Brush.Accent}" StrokeThickness="1.4" StrokeLineCap="Round"/>
+            <Line StartPoint="9.9,1" EndPoint="8.5,13" Stroke="{DynamicResource Brush.Accent}" StrokeThickness="1.4" StrokeLineCap="Round"/>
+            <Line StartPoint="1,5" EndPoint="12.4,5" Stroke="{DynamicResource Brush.Accent}" StrokeThickness="1.4" StrokeLineCap="Round"/>
+            <Line StartPoint="1,9.6" EndPoint="12.4,9.6" Stroke="{DynamicResource Brush.Accent}" StrokeThickness="1.4" StrokeLineCap="Round"/>
+          </Canvas>
+        </Viewbox>
+      </Panel>
+    </Border>
+  </Panel>
+</UserControl>

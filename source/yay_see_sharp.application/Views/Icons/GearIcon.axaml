@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="yay_see_sharp.application.Views.Icons.GearIcon"
+             x:Name="Root">
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="14" Height="14">
+      <Ellipse Canvas.Left="4.4" Canvas.Top="4.4" Width="5.2" Height="5.2"
+                StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Line StartPoint="10.4,7" EndPoint="12.2,7" StrokeLineCap="Round"
+            StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Line StartPoint="8.7,9.94" EndPoint="9.6,11.5" StrokeLineCap="Round"
+            StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Line StartPoint="5.3,9.94" EndPoint="4.4,11.5" StrokeLineCap="Round"
+            StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Line StartPoint="3.6,7" EndPoint="1.8,7" StrokeLineCap="Round"
+            StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Line StartPoint="5.3,4.06" EndPoint="4.4,2.5" StrokeLineCap="Round"
+            StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Line StartPoint="8.7,4.06" EndPoint="9.6,2.5" StrokeLineCap="Round"
+            StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+    </Canvas>
+  </Viewbox>
+</UserControl>

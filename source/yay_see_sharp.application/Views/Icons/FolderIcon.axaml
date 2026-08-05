@@ -1,0 +1,12 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="yay_see_sharp.application.Views.Icons.FolderIcon"
+             x:Name="Root">
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="14" Height="14">
+      <Path Data="M1.5 3.5a1 1 0 0 1 1-1h2.4l1 1.2h6a1 1 0 0 1 1 1v5.8a1 1 0 0 1-1 1h-9.4a1 1 0 0 1-1-1V3.5z"
+            StrokeThickness="1.3" StrokeJoin="Round"
+            Stroke="{Binding #Root.Stroke}"/>
+    </Canvas>
+  </Viewbox>
+</UserControl>

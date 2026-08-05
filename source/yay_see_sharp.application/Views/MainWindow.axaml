@@ -1,18 +1,79 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:yay_see_sharp.application.ViewModels"
+        xmlns:icons="using:yay_see_sharp.application.Views.Icons"
+        xmlns:conv="using:yay_see_sharp.application.Converters"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="640"
         x:Class="yay_see_sharp.application.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
-        Title="yay_see_sharp.application">
+        Icon="/Assets/app-icon.ico"
+        Width="1080" Height="680" MinWidth="760" MinHeight="480"
+        Background="{DynamicResource Brush.Background}"
+        FontFamily="{DynamicResource Font.Default}"
+        Title="Yay See Sharp">
 
     <Design.DataContext>
-        <vm:MainWindowViewModel/>
+        <vm:DesignMainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+    <Panel>
+        <Grid ColumnDefinitions="140,*">
+
+            <!-- Sidebar -->
+            <Grid Grid.Column="0" Background="{DynamicResource Brush.Sidebar}"
+                  RowDefinitions="Auto,*,Auto" Margin="10,16">
+
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="2,0,0,12">
+                    <icons:LogoMark Size="24"/>
+                    <TextBlock Text="Yay See Sharp" FontSize="12.5" FontWeight="SemiBold"
+                               Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <ListBox Grid.Row="1" Theme="{StaticResource NavListBox}"
+                         VerticalAlignment="Top"
+                         ItemsSource="{Binding NavigationItems}"
+                         SelectedItem="{Binding SelectedNavigationItem}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:NavigationItemViewModel">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <icons:GridIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
+                                                 IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Dashboard}"/>
+                                <icons:SearchIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
+                                                   IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Search}"/>
+                                <icons:BoxIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
+                                                IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Installed}"/>
+                                <icons:GearIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
+                                                 IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Settings}"/>
+                                <TextBlock Text="{Binding Title}" Foreground="{Binding $parent[ListBoxItem].Foreground}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+            </Grid>
+
+            <!-- Content -->
+            <Grid Grid.Column="1" RowDefinitions="Auto,*">
+                <Border Grid.Row="0" IsVisible="{Binding HasWarning}"
+                        Background="{DynamicResource Brush.AccentTint}"
+                        BorderBrush="{DynamicResource Brush.Divider}" BorderThickness="0,0,0,1"
+                        Padding="20,8">
+                    <TextBlock Text="{Binding WarningMessage}" FontSize="11.5"
+                               Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+                </Border>
+                <ContentControl Grid.Row="1" Content="{Binding CurrentPage}"/>
+            </Grid>
+
+        </Grid>
+
+        <!-- Global auth prompt overlay: blocks interaction with the rest of the window. -->
+        <Border IsVisible="{Binding AuthPrompt, Converter={x:Static ObjectConverters.IsNotNull}}"
+                Background="{DynamicResource Brush.ScrimBackdrop}">
+            <ContentControl Content="{Binding AuthPrompt}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+    </Panel>
 
 </Window>

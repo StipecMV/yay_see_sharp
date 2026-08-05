@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <IsPackable>false</IsPackable>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <OutputPath>..\..\output\bin\</OutputPath>
+    <IntermediateOutputPath>..\..\output\obj\yay_see_sharp.integration.Tests\</IntermediateOutputPath>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+
+  <!--
+    Real dependency integration tests: network, filesystem, and (where noted) the yay/paru
+    binaries themselves. Not part of CI, run manually via "dotnet run" against this project.
+    No mocks by design; see the skip conditions documented in each test file.
+  -->
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\source\yay_see_sharp.application\yay_see_sharp.application.csproj" />
+  </ItemGroup>
+
+</Project>

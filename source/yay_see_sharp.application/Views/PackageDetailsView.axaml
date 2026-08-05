@@ -1,0 +1,109 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:yay_see_sharp.application.ViewModels"
+             xmlns:models="using:yay_see_sharp.domain.Models"
+             xmlns:conv="using:yay_see_sharp.application.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="560"
+             x:Class="yay_see_sharp.application.Views.PackageDetailsView"
+             x:DataType="vm:PackageDetailsViewModel"
+             Background="{DynamicResource Brush.Surface}"
+             CornerRadius="10">
+
+    <Panel>
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="16">
+
+            <Grid ColumnDefinitions="48,*,Auto">
+                <Border Grid.Column="0" Width="48" Height="48" CornerRadius="10" VerticalAlignment="Top"
+                        Background="{DynamicResource Brush.AccentTint}">
+                    <TextBlock Text="{Binding Summary.Name, Converter={x:Static conv:InitialsConverter.Instance}}"
+                               FontFamily="{DynamicResource Font.Monospace}" FontWeight="SemiBold" FontSize="15"
+                               Foreground="{DynamicResource Brush.Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Summary.Name}" FontSize="17" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
+                    <TextBlock FontSize="12" Foreground="{DynamicResource Brush.TextMuted}">
+                        <Run Text="v"/><Run Text="{Binding Summary.Version}"/>
+                        <Run Text=" · "/>
+                        <Run Text="{Binding Summary.Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"/>
+                    </TextBlock>
+                </StackPanel>
+                <Border Grid.Column="2" Theme="{StaticResource TagAccent}" VerticalAlignment="Top"
+                        IsVisible="{Binding IsInstalled}">
+                    <TextBlock Text="{Binding StateLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TagAccentFg}"/>
+                </Border>
+            </Grid>
+
+            <TextBlock Text="{Binding Details.Summary.Description}" FontSize="13" LineHeight="21"
+                       Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+
+            <TextBlock Text="{Binding NoDetailsLabel}" IsVisible="{Binding Details, Converter={x:Static ObjectConverters.IsNull}}"
+                       FontSize="12.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+            <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
+                       FontSize="12.5" Foreground="{DynamicResource Brush.Destructive}" TextWrapping="Wrap"/>
+
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" IsVisible="{Binding Details, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,10">
+                    <TextBlock Text="{Binding MaintainerLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+                    <TextBlock Text="{Binding Details.Maintainer}" FontSize="13" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10" IsVisible="{Binding Summary.Votes, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <TextBlock Text="{Binding VotesLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+                    <TextBlock Text="{Binding Summary.Votes, StringFormat='★ {0:N0}'}"
+                               FontSize="13" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="0">
+                    <TextBlock Text="{Binding InstallSizeLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+                    <TextBlock Text="{Binding Summary.InstalledSizeBytes, Converter={x:Static conv:ByteSizeConverter.Instance}}"
+                               FontSize="13" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel IsVisible="{Binding HasDependencies}">
+                <TextBlock Text="{Binding DependenciesLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,0,0,8"/>
+                <ItemsControl ItemsSource="{Binding Details.Dependencies}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="models:PackageDependency">
+                            <Border Theme="{StaticResource TagNeutral}" Margin="0,0,6,6">
+                                <TextBlock Text="{Binding Name}" FontSize="11" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <StackPanel Spacing="4" IsVisible="{Binding Operation, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="{Binding Operation.StageLabel}" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Operation.Percent}" Height="4"
+                             Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"/>
+                <Button Classes="neutral" Content="{Binding Operation.CancelLabel}" Command="{Binding Operation.CancelCommand}" HorizontalAlignment="Left"/>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
+                <Button Grid.Column="0" Classes="destructive" Content="{Binding UninstallLabel}" Command="{Binding UninstallCommand}"
+                        IsVisible="{Binding IsInstalled}"
+                        HorizontalContentAlignment="Center" Margin="0,0,4,0"/>
+                <Button Grid.Column="0" Content="{Binding InstallLabel}" Command="{Binding InstallCommand}"
+                        IsVisible="{Binding !IsInstalled}"
+                        HorizontalContentAlignment="Center" Margin="0,0,4,0"/>
+                <Button Grid.Column="1" Content="{Binding ViewPkgbuildLabel}" Command="{Binding ViewPkgbuildCommand}"
+                        HorizontalContentAlignment="Center" Margin="4,0,0,0"/>
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+
+        <Border IsVisible="{Binding Pkgbuild, Converter={x:Static ObjectConverters.IsNotNull}}"
+                Background="{DynamicResource Brush.ScrimBackdrop}">
+            <ContentControl Content="{Binding Pkgbuild}"/>
+        </Border>
+    </Panel>
+
+</UserControl>

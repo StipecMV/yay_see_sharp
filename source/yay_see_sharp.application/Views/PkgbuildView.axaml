@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:yay_see_sharp.application.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="420"
+             x:Class="yay_see_sharp.application.Views.PkgbuildView"
+             x:DataType="vm:PkgbuildViewModel">
+
+    <Border Background="{DynamicResource Brush.Surface}" CornerRadius="14" Padding="18"
+            Width="480" MaxHeight="480" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid RowDefinitions="Auto,*,Auto" MinHeight="200">
+
+            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                <TextBlock Grid.Column="0" Text="{Binding TitleLabel}" FontSize="15" FontWeight="Medium"
+                           Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                <Button Grid.Column="1" Classes="subtle" Content="×" Command="{Binding CloseCommand}"/>
+            </Grid>
+
+            <Border Grid.Row="1" Background="{DynamicResource Brush.Background}" CornerRadius="8" Padding="10" MinHeight="180">
+                <Grid>
+                    <TextBlock Text="…" FontSize="13" Foreground="{DynamicResource Brush.TextFaint}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsVisible="{Binding IsLoading}"/>
+                    <TextBlock Text="{Binding ErrorMessage}" FontSize="12.5" Foreground="{DynamicResource Brush.Destructive}"
+                               TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                    <ScrollViewer IsVisible="{Binding Content, Converter={x:Static ObjectConverters.IsNotNull}}">
+                        <SelectableTextBlock Text="{Binding Content}" FontFamily="{DynamicResource Font.Monospace}"
+                                              FontSize="11.5" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+
+            <Button Grid.Row="2" Classes="neutral" Content="{Binding CloseLabel}" Command="{Binding CloseCommand}"
+                    HorizontalAlignment="Right" Margin="0,12,0,0"/>
+
+        </Grid>
+    </Border>
+
+</UserControl>

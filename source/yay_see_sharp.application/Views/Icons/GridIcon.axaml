@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="yay_see_sharp.application.Views.Icons.GridIcon"
+             x:Name="Root">
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="14" Height="14">
+      <Rectangle Canvas.Left="2" Canvas.Top="2" Width="4.5" Height="4.5" RadiusX="1" RadiusY="1"
+                 StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Rectangle Canvas.Left="7.5" Canvas.Top="2" Width="4.5" Height="4.5" RadiusX="1" RadiusY="1"
+                 StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Rectangle Canvas.Left="2" Canvas.Top="7.5" Width="4.5" Height="4.5" RadiusX="1" RadiusY="1"
+                 StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+      <Rectangle Canvas.Left="7.5" Canvas.Top="7.5" Width="4.5" Height="4.5" RadiusX="1" RadiusY="1"
+                 StrokeThickness="1.4" Stroke="{Binding #Root.Stroke}"/>
+    </Canvas>
+  </Viewbox>
+</UserControl>

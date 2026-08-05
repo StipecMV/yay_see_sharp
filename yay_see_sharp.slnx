@@ -5,6 +5,12 @@
     <File Path="LICENSE" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="source/yay_see_sharp.domain/yay_see_sharp.domain.csproj" />
+  <Project Path="source/yay_see_sharp.infrastructure/yay_see_sharp.infrastructure.csproj" />
   <Project Path="source/yay_see_sharp.application/yay_see_sharp.application.csproj" />
-  <Project Path="tests/yay_see_sharp.unittests/yay_see_sharp.unittests.csproj" />
+  <Project Path="tests/yay_see_sharp.domain.Tests/yay_see_sharp.domain.Tests.csproj" />
+  <Project Path="tests/yay_see_sharp.infrastructure.Tests/yay_see_sharp.infrastructure.Tests.csproj" />
+  <Project Path="tests/yay_see_sharp.application.Tests/yay_see_sharp.application.Tests.csproj" />
+  <Project Path="tests/yay_see_sharp.integration.Tests/yay_see_sharp.integration.Tests.csproj" />
+  <Project Path="tests/yay_see_sharp.e2e.Tests/yay_see_sharp.e2e.Tests.csproj" />
 </Solution>
