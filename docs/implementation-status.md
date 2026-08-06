@@ -1,73 +1,111 @@
 # yay_see_sharp — Implementation Status
 
-> Tento dokument popisuje **skutočný stav behu kódu** ku dňu poslednej aktualizácie, nie plán. Kde je funkcia len čiastočná, je to explicitne uvedené aj s tým, čo chýba. Automatizovaná verifikácia (build + testy) je striktne oddelená od manuálnej GUI verifikácie — druhá menovaná v tomto sandboxe (bez displeja/D-Bus) nebola a nemôže byť vykonaná.
+> Tento dokument popisuje **skutočný stav behu kódu**, nie plán. Kde je funkcia len čiastočná, je to explicitne uvedené aj s tým, čo chýba. Automatizovaná verifikácia (build + testy) je striktne oddelená od manuálnej GUI/real-Arch verifikácie — druhá menovaná nebola v tomto sandboxe vykonaná (bez X11/Wayland, bez `notify-send`/D-Bus session, bez reálneho Arch/CachyOS hosta).
+
+**Dátum poslednej verifikácie:** 2026-08-05.
 
 ## Posledný build/test stav (automatizovaná verifikácia)
 
-- **Build:** `dotnet build --configuration Debug` — 0 warnings, 0 errors, celé riešenie (`yay_see_sharp.application`, `yay_see_sharp.unittests`, `yay_see_sharp.integrationtests`).
-- **Unit testy** (`tests/yay_see_sharp.unittests`, `dotnet run --project ...`): **162/162 passed, 0 skipped.**
-- **Integračné testy** (`tests/yay_see_sharp.integrationtests`, spúšťané manuálne, nie v CI): **14 total — 11 passed, 3 skipped.** Skipnuté 3 testy sú explicitne gated na reálny Arch/CachyOS host s nainštalovaným `yay` cez `YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1` (na tomto Ubuntu vývojovom stroji sa automaticky preskakujú — to je očakávané správanie, nie zlyhanie).
-- **Manuálna GUI verifikácia:** **nebola vykonaná.** Sandbox nemá X11/Wayland displej ani `notify-send`/D-Bus session, takže vizuálny vzhľad, sudo prompt dialóg, tray ikonu a skutočné desktop notifikácie nie je možné v tomto prostredí odskúšať očami. Všetko nižšie označené "Hotové" je hotové a **testované na úrovni kódu** (unit/integration testy), nie vizuálne overené v bežiacej aplikácii.
+```bash
+dotnet restore yay_see_sharp.slnx
+dotnet build yay_see_sharp.slnx --configuration Debug
+dotnet build yay_see_sharp.slnx --configuration Release
+dotnet run --project tests/yay_see_sharp.domain.Tests/
+dotnet run --project tests/yay_see_sharp.infrastructure.Tests/
+dotnet run --project tests/yay_see_sharp.application.Tests/
+dotnet run --project tests/yay_see_sharp.integration.Tests/
+dotnet run --project tests/yay_see_sharp.e2e.Tests/
+```
+
+- **Build:** Debug aj Release — 0 warnings, 0 errors, celé riešenie (3 source assembly: `yay_see_sharp.domain`, `yay_see_sharp.infrastructure`, `yay_see_sharp.application`; 5 test projektov nižšie).
+- **Testy — spolu 235: 232 passed, 0 failed, 3 skipped.**
+
+| Projekt | Príkaz | Total | Passed | Failed | Skipped |
+| --- | --- | --- | --- | --- | --- |
+| `tests/yay_see_sharp.domain.Tests` | `dotnet run --project tests/yay_see_sharp.domain.Tests/` | 2 | 2 | 0 | 0 |
+| `tests/yay_see_sharp.infrastructure.Tests` | `dotnet run --project tests/yay_see_sharp.infrastructure.Tests/` | 128 | 128 | 0 | 0 |
+| `tests/yay_see_sharp.application.Tests` | `dotnet run --project tests/yay_see_sharp.application.Tests/` | 83 | 83 | 0 | 0 |
+| `tests/yay_see_sharp.integration.Tests` (manuálny beh, nie CI) | `dotnet run --project tests/yay_see_sharp.integration.Tests/` | 14 | 11 | 0 | 3 (gated na Arch/CachyOS host) |
+| `tests/yay_see_sharp.e2e.Tests` (Avalonia Headless) | `dotnet run --project tests/yay_see_sharp.e2e.Tests/` | 8 | 8 | 0 | 0 |
+
+3 skipnuté testy v `integration.Tests` sú deštruktívne (reálne inštalujú/odinštalujú balík `hello` cez `yay`) a gated cez `YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1` — bežia iba na Arch/CachyOS hoste s `yay` na `PATH`. Na tomto vývojovom stroji sa preto automaticky preskakujú; to je očakávané správanie, nie zlyhanie.
+
+- **Vulnerability scan:** `dotnet list yay_see_sharp.slnx package --vulnerable --include-transitive` — žiadne známe zraniteľné balíky (pozri sekciu "Verifikácia" nižšie pre presný výstup pri poslednom behu).
+- **Manuálna GUI verifikácia:** **nebola vykonaná.** Sandbox nemá X11/Wayland displej, `notify-send`/D-Bus session ani reálny Arch/CachyOS host. Všetko nižšie označené "Hotové" je hotové a **testované na úrovni kódu** (unit/integration/headless E2E testy), nie vizuálne overené v bežiacej aplikácii na reálnom hardvéri. Kde je rozdiel medzi "kód existuje a je testovaný" a "overené na reálnom Arch hoste" významný, je to uvedené explicitne pri danej položke.
+
+## Architektúra — 3 source assembly
+
+| Projekt | Obsah | Poznámka |
+| --- | --- | --- |
+| `source/yay_see_sharp.domain` | Modely, rozhrania (`IPackageBackend`, `IPrivilegeService`, `INotificationService`, `IBuildDirectoryPolicy`, `IBackendInstaller`, ...), `NullNotificationService` | Žiadna závislosť na Avalonic ani na konkrétnom OS I/O. `NullNotificationService` sem bol presunutý z `infrastructure` (je to čistý no-op bez I/O, takže tu patrí — pozri Finding #08 nižšie). |
+| `source/yay_see_sharp.infrastructure` | `YayPackageBackend`, `DemoPackageBackend`, `PacmanQueryService`, HTTP/filesystem služby, sudo elevácia, scheduler, notifikácie, `EngineDetector`, `DistributionDetector` | Žiadna závislosť na Avalonia. |
+| `source/yay_see_sharp.application` | Avalonia Views, ViewModely, `AppBootstrapper` (jediný production composition root) | Referencuje domain + infrastructure. |
 
 ## Doména a backendy
 
 | Oblasť | Stav | Testy | Poznámka |
 | --- | --- | --- | --- |
-| `Domain/Models` (`PackageSummary`, `PackageDetails`, `PackageStatistics`, `UpdateInfo`, `PackageOperationProgress`, `BackendInfo`, ...) | Hotové | — | Nezmenené od predchádzajúcich iterácií. |
-| `IPackageBackend` kontrakt | Hotové | Pozri kontraktné testy nižšie | Search/details/statistics/updates/install/uninstall/update s `IAsyncEnumerable<PackageOperationProgress>` streamovaním pre operácie. |
-| `YayPackageBackend` | Hotové | `PackageBackendTests` (~20 testov vrátane elevation scenárov) | Všetky metódy IPackageBackend implementované cez `yay` CLI + `ICommandRunner`. Install/Uninstall/Update volajú `TryElevateAsync` pred spustením príkazu (pozri sekciu Privilege elevation nižšie). |
-| `YayOutputParser` | Hotové | `PackageBackendTests` (parser: search, info, updates, installed) | Parsuje textový výstup `yay -Ss/-Qi/-Qu/-Q`. |
-| `DemoPackageBackend` | **Hotové (opravený kontrakt — Finding #10)** | `PackageBackendTests` + `DemoBackendContractTests` | Pôvodne sa správal odlišne od `YayPackageBackend`: hádzal `InvalidOperationException` pri neznámom balíku namiesto `Failed` progress eventu, nezvládal zrušenie (unhandled `OperationCanceledException`), nemal spôsob simulovať zlyhanie platného balíka a `UpdateAsync` ticho ignoroval neznáme názvy namiesto zlyhania celej operácie. Všetky štyri opravené: pridaný `simulatedFailures` konštruktorový parameter, `TryDelayAsync` helper pre graceful cancellation, `Failed`/`Cancelled` progress namiesto výnimiek, `UpdateAsync` teraz all-or-nothing pri neznámom názve (zhoduje sa so správaním pacman/yay). |
-| `PackageBackendFactory` | **Čiastočné** | `PackageBackendFactoryTests` | Arch/CachyOS → `YayPackageBackend`, iné distro → `DemoPackageBackend`. **Chýba:** vetvenie na `ParuPackageBackend` — `Settings.Engine` je momentálne obmedzený len na hodnotu `Yay` (pozri "Engine picker" nižšie), `paru` vetva je označená `// TODO: paru support` v `PackageBackendFactory.cs:34` a nie je implementovaná. |
-| **Kontraktné testy Demo vs. Yay backend (Finding #10)** | **Hotové** | `PackageBackendContractTestsBase` (abstraktná, `[InheritsTests]`) → `DemoBackendContractTests`, `YayBackendContractTests` = 12 zdieľaných testov × 2 backendy = 24 testov | Overuje identické správanie oboch implementácií `IPackageBackend` pre: install (úspech/zlyhanie/neplatný názov/cancel), uninstall (`removeOrphans` true aj false, cancel), update (all/selected/neplatný názov/cancel), a zachovanie `Output` textu vo finálnom progress evente. `YayPackageBackend` je v týchto testoch napojený na nový `FakeYayCommandRunner` (test double, **nie** mock so striktnými interakčnými očakávaniami) — stavový simulátor, ktorý rozpoznáva presné argumenty, aké produkuje Install/Uninstall/Update (`--needed --noconfirm -S`, `--noconfirm -Rns`/`-Rn`, `-Syu --noconfirm`, `-S --noconfirm --needed <pkgs>`) a udržiava vlastný set nainštalovaných balíkov. Skutočný `yay` binárny súbor sa v týchto testoch nepoužíva. |
+| `IPackageBackend` kontrakt | Hotové | `PackageBackendContractTestsBase` → `DemoBackendContractTests`, `YayBackendContractTests` | Zdieľané kontraktné testy overujú identické správanie Demo a Yay backendu. |
+| **Backend availability detection (FINDING-01)** | **Hotové** | `PackageBackendFactoryTests`, `EngineDetectorTests`, `PackageBackendTests` (distribution detector) | `PackageBackendFactory` teraz overuje `yay` dostupnosť cez `IEngineDetector` (jediný zdroj pravdy) predtým, než označí backend za `Real`. Arch/CachyOS bez `yay` na `PATH` → `BackendMode.Unavailable` (bezpečný Demo-backed fallback + explicitný warning v UI), nie tiché `Real` mode. `EngineDetector` navyše overuje aj exec bit (súbor existujúci, ale nespustiteľný, sa už nepovažuje za "yay na PATH"). |
+| **Missing-backend install flow (FINDING-10)** | **Hotové (kód + unit testy), reálna inštalácia yay na Arch nebola manuálne overená** | `YayBackendInstaller` (nový), `BackendInstallPromptViewModel` + View | Pri `BackendMode.Unavailable` sa pri štarte automaticky ponúkne dialog s presným command preview (`sudo pacman -S --needed --noconfirm yay` na CachyOS, `git clone` + `makepkg -si` na plain Arch) a Confirm/Close tlačidlami. Elevácia cez existujúci `IPrivilegeService` flow, žiadny shell string. **Vedomé zjednodušenie:** po úspešnej inštalácii sa backend v bežiacej session NEPREPÍNA naživo (child ViewModely už boli postavené nad pôvodným Demo-backed backendom pri štarte) — UI zobrazí hint, že treba appku reštartovať. Plný live-swap by vyžadoval širšiu zmenu architektúry (mutable backend provider naprieč Dashboard/Search/Installed), čo presahuje rozsah tohto findingu. |
+| `YayPackageBackend` | Hotové | `PackageBackendTests` (~45 testov) | Search/details/statistics/updates/install/uninstall/update, `IAsyncEnumerable<PackageOperationProgress>` streaming pre operácie. |
+| **Real backend statistics (FINDING-02)** | **Hotové** | `PackageBackendTests` (explicit/dependency/AUR/orphan/updates/size + "unknown vs. zero" testy) | Nový `PacmanQueryService` centralizuje `pacman -Qe/-Qd/-Qm/-Qdt/-Qu/-Qi` query a ich parsing. Každé pole v `PackageStatistics` (okrem `InstalledCount`) je teraz `int?`/`long?` — zlyhanie jednej query vráti `null` (Unknown), nie falošnú nulu. `pacman`-ov "exit 1 s prázdnym výstupom" (0 zhôd) sa správne interpretuje ako `0`, nie ako zlyhanie. |
+| **GetDetailsAsync pre nenainštalované balíky (FINDING-03)** | **Hotové** | `PackageBackendTests` (installed/-Si/-Sia fallback reťazec) | `-Qi` → `-Si` (official) → `-Sia` (AUR) fallback reťazec. `YayOutputParser.ParseInfo` má voliteľný `sourceHint`, použitý keď `-Sia` output nemá "Repository" pole. |
+| **AUR/Official klasifikácia (FINDING-04)** | **Hotové** | `PackageBackendTests` (parser classification testy) | `ParseInstalled`/`ParseUpdates` teraz prijímajú voliteľný `IReadOnlySet<string> foreignPackageNames` (z `pacman -Qm`) a klasifikujú podľa neho — nie viac vždy `Official`. |
+| `DemoPackageBackend` | Hotové | `PackageBackendTests` + `DemoBackendContractTests` | Graceful `Failed`/`Cancelled` progress namiesto výnimiek, `UpdateAsync` all-or-nothing pri neznámom názve. |
+| **BuildDirectory runtime consumer (FINDING-09)** | **Hotové** | `PackageBackendTests` (`--builddir` wiring, `~` expansion, missing/not-writable directory) | `YayPackageBackend` teraz berie voliteľný `IBuildDirectoryPolicy` (implementuje ho `SettingsViewModel`) a pri Install/Update pridáva `--builddir {expandedPath}` do `ArgumentList` (nikdy shell string). `~` expanduje na `Environment.SpecialFolder.UserProfile`. Ak nakonfigurovaný priečinok neexistuje alebo nie je writable → operácia zlyhá s presnou chybovou správou v UI namiesto pádu alebo tichého ignorovania nastavenia. |
+| **Argument/flag injection hardening (FINDING-11)** | **Hotové** | `PackageBackendTests` (leading-dash package name, invalid character, `--` separator v search) | `PackageArgumentValidator` validuje package names proti Arch naming rules (`^[a-zA-Z0-9@._+-]+$`, nesmie začínať `-`) pred akýmkoľvek Install/Uninstall/Update volaním. Search query teraz vždy posiela `--` separator pred pozičný argument (`yay -Ss -- <query>`). `ArgumentList` (nie shell string) bolo zachované všade. |
+| `PackageBackendFactory` | **Čiastočné** | `PackageBackendFactoryTests` | **Chýba:** `ParuPackageBackend` (žiadny reálny `paru` backend zatiaľ neexistuje) — pozri "Engine picker" nižšie. |
 
 ## UI / theming
 
 | Oblasť | Stav | Testy | Poznámka |
 | --- | --- | --- | --- |
-| App shell (140px sidebar, navigácia) + Dark/Light theme systém | Hotové (build+XAML kompilácia overené) | — | `Themes/Colors.axaml`, `Themes/Controls.axaml`, `ThemeVariant` naviazaný na `Settings.Theme` reaktívne v `App.axaml.cs`. Vizuálne neoverené (žiadny displej v sandboxe). |
-| 9 obrazoviek (Loading, Dashboard, Search, Installed, Package details, Settings, Password prompt, Tray, Folder browser) | Hotové (build+XAML kompilácia overené) | ViewModel testy pre každú (pozri nižšie) | Vektorové ikony (`Views/Icons/*`) namiesto rastrových assetov. |
-| PKGBUILD viewer (in-app modal) | Hotové | `PkgbuildViewModelTests`, `PkgbuildFetchIntegrationTests` | Fetchuje raw text z `https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h={pkgname}` cez `IPkgbuildService` → `PkgbuildService` (real `HttpClient`), zobrazí v scrollovateľnom monospace modale. Chyby (network/404) sa zobrazia ako `ErrorMessage` v modale, nie pád aplikácie. |
-| Lokalizácia EN/SK, live prepínanie jazyka | Hotové | `LocalizationServiceTests` + testy naprieč všetkými ViewModelmi (`LocalizedViewModelBase`) | Vrátane `Dashboard.Relative.*` kľúčov pre relatívny čas (bod nižšie). |
-| `DashboardViewModel.FormatRelative` (Finding #11) | **Hotové** | `DashboardViewModelTests` (4 testy: en/sk, singulár/plurál, "moments ago") | Pôvodne natvrdo anglický text (`"X minutes ago"`), teraz cez `Localization.GetString` s singulárnym/plurálnym kľúčom (`FormatUnit` helper). |
+| App shell + Dark/Light theme systém | Hotové (build+XAML kompilácia + headless E2E overené) | `AppShellE2ETests`, `SettingsE2ETests` | `Sidebar_renders_one_realized_list_box_item_per_navigation_entry` je regresný test pre reálny bug (chýbajúci `Template` v `NavListBox` ControlTheme spôsobil, že sidebar sa vôbec nevykresľoval) objavený pri generovaní screenshotov cez Avalonia Headless. |
+| Obrazovky (Dashboard, Search, Installed, Package details, Settings, Password prompt, Tray, Folder browser, **Backend install prompt — nová, FINDING-10**) | Hotové (build+XAML kompilácia + headless E2E) | ViewModel testy + E2E testy | |
+| PKGBUILD viewer (in-app modal) | Hotové | `PkgbuildViewModelTests` (vrátane cancellation-on-close), `PkgbuildFetchIntegrationTests` | Pozri FINDING-13 nižšie pre cancellation detaily. |
+| Lokalizácia EN/SK, live prepínanie jazyka | Hotové | `LocalizationServiceTests` + testy naprieč ViewModelmi, `SettingsE2ETests` (regresný test na pôvodný ComboBox-empties-on-language-switch bug) | |
 
-## Filesystem/HTTP I/O abstrakcia (Finding #8)
-
-| Oblasť | Stav | Testy | Poznámka |
-| --- | --- | --- | --- |
-| `IFolderBrowserService` / `FolderBrowserService` | Hotové | `FolderBrowserViewModelTests` (mockovaná služba), `FolderBrowserFilesystemIntegrationTests` (reálny `/tmp`) | `FolderBrowserViewModel` už priamo nevolá `Directory.*` — všetka I/O je za rozhraním. |
-| `IPkgbuildService` / `PkgbuildService` | Hotové | `PkgbuildViewModelTests` (mockovaná služba), `PkgbuildFetchIntegrationTests` (reálna AUR sieť) | `PkgbuildViewModel` už priamo nevolá `HttpClient` — nahradené injektovaným rozhraním. |
-
-## Privilege elevation, scheduler, notifikácie (Findings #5, #6, #7)
+## Composition root (FINDING-08)
 
 | Oblasť | Stav | Testy | Poznámka |
 | --- | --- | --- | --- |
-| `IPrivilegeService` / `SudoPrivilegeService` — reálna sudo elevácia | **Hotové (kód + unit testy), manuálne neoverené** | `SudoPrivilegeServiceTests`, 4 elevation scenáre v `PackageBackendTests` (granted/cancelled/failed × install/uninstall/update) | `sudo -S -v` cez stdin pipe (`ProcessSudoInvoker`), heslo sa nikdy nezapisuje do `CommandRequest.Arguments`, nikdy sa nelogguje ani nepersistuje. `PasswordPrompt` je neskoro naviazaný delegate (rieši cyklickú závislosť konštrukcie: backend potrebuje privilege service skôr, než existuje `MainWindowViewModel` s reálnym UI promptom). **Skutočný interaktívny sudo prompt v behovej aplikácii nebol manuálne odskúšaný** — sandbox nemá TTY/GUI session na to. |
-| `IUpdateScheduler` / `UpdateScheduler` — automatický background update check | Hotové | `UpdateSchedulerTests` (s `FakeClock`, `FakeSettings`) | Polling loop rešpektuje `Settings.AutoUpdateCheckEnabled` na každý tick (zapnutie/vypnutie počas behu sa prejaví okamžite, bez reštartu). Pri vývoji objavený a opravený reálny bug: `NextScheduledRun` sa pôvodne prepočítaval z aktuálneho `now` pri každom ticku, čím `UpdateScheduleCalculator.GetNextRun` (ktorý vždy vracia čas `> now`) zaručene nikdy nesplnil podmienku `now >= next` — scheduler by nikdy nespustil beh. Opravené cachovaním `NextScheduledRun` a prepočtom až po skutočnom spustení. |
-| `INotificationService` — desktop notifikácie (`notify-send`) | **Hotové (kód + unit testy), manuálne neoverené** | `NotifySendNotificationServiceTests`, `SettingsAwareNotificationServiceTests` | `NotifySendNotificationService` spúšťa `notify-send` procesom; `SettingsAwareNotificationService` obalí a rešpektuje `Settings.NotificationsEnabled`; `NullNotificationService` ako bezpečný default pre testy/prípady bez konfigurácie. **Reálne odoslanie notifikácie cez `notify-send` nebolo manuálne overené** — sandbox nemá notification daemon/D-Bus session. |
-| Fire-and-forget async cleanup (Finding #9) | Hotové | Pokryté existujúcimi ViewModel testami (žiadna zmena správania, len bezpečnostná záruka) | Pomenovaný `Task.FireAndForget()` extension helper (`AsyncExtensions.cs`) nahradil 7 miest s "naked" fire-and-forget volaním (riziko unobserved task exceptions); `Install`/`Uninstall`/`RunUpdate` operácie majú teraz try/catch/finally zaručujúce, že `Operation`/`UpdateOperation` sa vždy vyčistí. |
+| ViewModely neinštanciujú Infrastructure priamo | **Hotové** | `ArchitectureTests.No_ViewModel_field_or_constructor_parameter_is_typed_as_a_concrete_infrastructure_class` (reflection-based, vynucuje pravidlo pri buildovaní testov, nie len disciplínou) | `SettingsViewModel`, `FolderBrowserViewModel`, `PkgbuildViewModel`, `SearchViewModel`, `InstalledPackagesViewModel`, `PackageDetailsViewModel` teraz prijímajú `IEngineDetector`/`IFolderBrowserService`/`IPkgbuildService` ako povinné (nie `?? new Concrete()`) constructor parametre. Všetky reálne inštancie sa vytvárajú v `AppBootstrapper`. `DesignMainWindowViewModel` je explicitný, samostatný design-time factory (jediné miesto mimo `AppBootstrapper`, kde sa smie vytvoriť konkrétna Infrastructure trieda priamo — nikdy nebeží v produkcii). `NullNotificationService` bol presunutý do `domain` projektu (je to čistý no-op bez I/O, takže odkaz naň z ViewModelu nie je DIP porušenie). |
 
-## Engine picker (Finding #4 — Option B)
+## Single instance, lock file, scheduler (FINDING-05, #06, #07)
+
+| Oblasť | Stav | Testy | Poznámka |
+| --- | --- | --- | --- |
+| **Scheduler timezone (FINDING-05)** | **Hotové** | `UpdateSchedulerTests` (UTC, CET zimný `+1`, CEST letný `+2`, zmena schedule za behu, disable/re-enable) | `IClock.LocalNow` (nový člen) — scheduler porovnáva `TimeOnly` proti lokálnemu času, nie UTC. `NextScheduledRun` sa invaliduje pri zmene `UpdateScheduleTime` alebo enable/disable toggle. |
+| **Single-instance IPC activation (FINDING-06)** | **Hotové** | `FileLockSingleInstanceServiceTests` (activation request received, no-listener-returns-false, listener stops cleanly) | `ISingleInstanceService.TryActivateExisting()` + `ActivationRequested` event. Implementácia cez Unix domain socket (`$XDG_RUNTIME_DIR/yay_see_sharp/activate.sock`). Druhá inštancia po zlyhaní `TryAcquire()` pošle activation message a skončí; prvá inštancia reaguje cez `Dispatcher.UIThread.Post` (window Show/WindowState/Activate). |
+| **Lock file path (FINDING-07)** | **Hotové** | `FileLockSingleInstanceServiceTests` (dispose nemaže lock file, adresár má `0700` na Linuxe) | Presunuté z predvídateľného `/tmp/yay_see_sharp.lock` na `$XDG_RUNTIME_DIR/yay_see_sharp/instance.lock` (per-user, nie world-writable `/tmp`). |
+
+## Privilege elevation, notifikácie
+
+| Oblasť | Stav | Testy | Poznámka |
+| --- | --- | --- | --- |
+| `IPrivilegeService` / `SudoPrivilegeService` | **Hotové (kód + unit testy), interaktívny sudo prompt manuálne neoverený** | `SudoPrivilegeServiceTests`, `ProcessSudoInvokerTests` (nový, reálny `sudo -n -v` binary), elevation scenáre v `PackageBackendTests` | `sudo -S -v` cez stdin pipe, heslo nikdy v argv/logoch. |
+| **Sudo process cancellation (FINDING-12)** | **Hotové** | `ProcessSudoInvokerTests` (already-cancelled token → `false` bez výnimky, stabilné opakované volania) | `ProcessSudoInvoker` teraz pri cancellation explicitne `Kill(entireProcessTree: true)`-uje sudo proces, zavrie stdin, await-ne exit na neasercovateľnom tokene (cleanup nemôže znova hodiť `OperationCanceledException`) a vráti `false` namiesto propagovania výnimky — konzistentné s existujúcim `SystemCommandRunner` vzorom. `ValidateTimestampAsync` má nový 10s timeout (linked CTS) — `sudo -n -v` sa nikdy nepýta na heslo, takže hang znamená zaseknutý PAM modul, nie legitímne čakanie. |
+| `IUpdateScheduler` | Hotové | `UpdateSchedulerTests` | Pozri FINDING-05 vyššie pre timezone fix. |
+| `INotificationService` — desktop notifikácie | **Hotové (kód + unit testy), manuálne neoverené** | `NotifySendNotificationServiceTests`, `SettingsAwareNotificationServiceTests` | Reálne `notify-send` odoslanie nebolo manuálne overené — sandbox nemá notification daemon. |
+| **PKGBUILD fetch cancellation (FINDING-13)** | **Hotové** | `PkgbuildViewModelTests` (close-during-fetch → žiadny error, close-before-load) | `PkgbuildViewModel` teraz vlastní `CancellationTokenSource`; `CloseCommand` ho zruší pred dokončením close tasku. `LoadAsync` rozlišuje "naša cancellation" (očakávané, žiadny `ErrorMessage`) od skutočného zlyhania/timeoutu (zobrazí sa ako error). `SharedHttpClient.Instance.Timeout` je teraz explicitne `15s` (namiesto BCL default 100s). |
+
+## Engine picker (Option B — dočasné obmedzenie na yay)
 
 | Oblasť | Stav | Poznámka |
 | --- | --- | --- |
-| Voľba `yay`/`paru` v Settings | **Čiastočné — dočasne obmedzené len na `yay`** | `SettingsViewModel.EngineOptions` obsahuje len `PackageManagerEngine.Yay`; konštruktor navyše "clampne" akékoľvek staré uložené `Paru` nastavenie späť na `Yay`, aby UI a perzistovaný stav nikdy nedivergovali. Toto je vedomé dočasné riešenie (Option B z code review) — `paru` engine reálne nikdy nebol implementovaný (žiadny `ParuPackageBackend`), takže predchádzajúci picker bol UI bez funkčného efektu. Skutočná podpora `paru` zostáva mimo rozsahu, kým nevznikne `ParuPackageBackend`. |
+| Voľba `yay`/`paru` v Settings | **Čiastočné — dočasne obmedzené len na `yay`** | `paru` engine nikdy nebol implementovaný ako backend (žiadny `ParuPackageBackend`); `design_handoff/README.md` toto explicitne označuje ako future feature (DOC-03). |
 
-## Package verzie — poznámka k `Avalonia.ReactiveUI`
+## Package verzie — `Avalonia.ReactiveUI` (FINDING-14)
 
-Riadené cez `Directory.Packages.props` (CPM). Avalonia core (`Avalonia`, `Avalonia.Desktop`, `Avalonia.Themes.Fluent`) je na `12.1.1`. `Avalonia.ReactiveUI` zostáva na `11.3.9`, pretože **k dátumu poslednej kontroly cez NuGet API nemá žiadny 12.x release** — `11.3.9` je jeho najnovšia dostupná verzia. Toto je akceptovaný kompromis, nie prehliadnutá chyba: `Avalonia.ReactiveUI` je tenký shim, ktorý len registruje `AppBuilder.UseReactiveUI()` scheduler a nezávisí od interných rendering/control API Avalonia, takže je pri prechode 11→12 hranici nízkorizikový. Pre porovnanie, `Avalonia.Diagnostics` (F12 dev-tools overlay) má rovnaký problém, ale **žiadnu bezpečnú fallback cestu** (viaže sa priamo na interné API), preto bol namiesto ponechania v nesúladnej verzii úplne odstránený z projektu.
+Overené znova cez NuGet API (`avalonia.reactiveui/index.json`) — **žiadny 12.x release stále neexistuje**, `11.3.9` zostáva najnovší. Rozhodnutie ponechať 11.3.9 popri 12.1.1 core je zdokumentované ako ADR priamo v `Directory.Packages.props` s regresným pokrytím cez `tests/yay_see_sharp.e2e.Tests` (headless beh reálnej appky s týmto presným package graphom, vrátane `ReactiveCommand` exekúcie naprieč navigáciou/search/theme/language). `dotnet list package --include-transitive` neobsahuje žiadny iný 11.x Avalonia core balík (`Avalonia`, `Avalonia.Desktop`, `Avalonia.Themes.Fluent`, `Avalonia.Skia`, `Avalonia.X11`, ... sú všetky `12.1.1`).
 
 ## Vedomé hranice rozsahu / známe medzery
 
-1. **`paru` engine** — nikdy neimplementovaný ako backend; UI ho momentálne ani neponúka (pozri "Engine picker" vyššie).
-2. **Manuálna GUI/vizuálna verifikácia** — nebola a nemôže byť vykonaná v tomto headless sandboxe (žiadny displej, žiadny D-Bus/notification daemon, žiadna interaktívna TTY session pre sudo). Všetko postavené na predpoklade, že Avalonia XAML kompilácia + unit testy ViewModelov zachytia regresie na úrovni logiky, nie vzhľadu.
-3. **Obsah z backendu za behu** (názvy/popisy balíkov, technické `Exception.Message` chybové hlásenia) sa neprekladá — len statický UI text má EN/SK preklad; dynamické chyby majú aspoň lokalizovaný prefix (`Generic.ErrorPrefix`).
-4. **`AvaloniaTrayService`** je funkčne lokalizovaný, no bez automatizovaného testu (GUI/OS-only funkcionalita).
-5. **3 integračné testy sú trvalo gated** na reálny Arch/CachyOS host s `yay` (`YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1`) — inštalujú/odinštalúvajú skutočný balík `hello`, preto sú zámerne deštruktívne a nikdy sa nespúšťajú automaticky.
-
-## Testy — celkový prehľad
-
-| Projekt | Total | Passed | Failed | Skipped |
-| --- | --- | --- | --- | --- |
-| `tests/yay_see_sharp.unittests` | 162 | 162 | 0 | 0 |
-| `tests/yay_see_sharp.integrationtests` (manuálny beh) | 14 | 11 | 0 | 3 (gated na Arch host) |
+1. **`paru` engine** — nikdy neimplementovaný ako backend; UI ho neponúka.
+2. **Manuálna GUI/vizuálna verifikácia** — nebola a nemôže byť vykonaná v tomto headless sandboxe. Headless E2E testy (Avalonia.Headless) čiastočne zmierňujú toto riziko — skutočne vykresľujú compiled Views cez reálny Skia renderer a boli použité aj na zachytenie reálnych screenshotov (`docs/screenshots/`) — ale nenahrádzajú overenie na reálnom X11/Wayland desktope, interaktívny sudo prompt, tray ikonu ani skutočné D-Bus notifikácie.
+3. **Reálny Arch/CachyOS host** — 3 integračné testy (real install/uninstall) a celý "Real mode" backend (statistics, AUR classification, backend install flow) sú testované proti mockovanému/fake `ICommandRunner`, nie proti skutočnému `yay`/`pacman` behu. Kód je navrhnutý podľa dokumentovaného správania `pacman`/`yay`, ale nebol spustený na reálnom Arch systéme v rámci tejto session.
+4. **Obsah z backendu za behu** (názvy/popisy balíkov, technické `Exception.Message` chybové hlásenia) sa neprekladá.
+5. **`AvaloniaTrayService`** je funkčne lokalizovaný, no bez automatizovaného testu (GUI/OS-only funkcionalita).
+6. **Backend install flow (FINDING-10) nerobí live swap** — po úspešnej inštalácii `yay` treba appku reštartovať, aby sa reálne prepla na Real mode (pozri FINDING-10 vyššie).
+7. **3 integračné testy sú trvalo gated** na reálny Arch/CachyOS host s `yay` (`YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1`).

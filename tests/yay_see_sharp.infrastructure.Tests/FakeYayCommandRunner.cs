@@ -5,6 +5,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using yay_see_sharp.infrastructure.Process;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 /// <summary>
 /// Stateful ICommandRunner double that recognizes the exact argument shapes YayPackageBackend's
 /// Install/Uninstall/Update emit, so YayPackageBackend can be exercised in contract tests without a

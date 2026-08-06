@@ -1,10 +1,14 @@
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using Moq;
+using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Demo;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
+
+namespace yay_see_sharp.application.Tests;
 
 public class DemoEndToEndTests
 {
@@ -12,7 +16,7 @@ public class DemoEndToEndTests
     public async Task Search_select_install_and_uninstall_workflow_reflects_in_demo_state()
     {
         var backend = new DemoPackageBackend();
-        var search = new SearchViewModel(backend, new LocalizationService("en")) { Query = "hello" };
+        var search = new SearchViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>()) { Query = "hello" };
 
         await search.SearchCommand.Execute();
         await Assert.That(search.Results.Count).IsGreaterThan(0);

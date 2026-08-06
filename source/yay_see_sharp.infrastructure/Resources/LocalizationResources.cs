@@ -17,10 +17,12 @@ internal static class LocalizationResources
 
                 ["Backend.ModeReal"] = "Real",
                 ["Backend.ModeDemo"] = "Demo",
+                ["Backend.ModeUnavailable"] = "yay missing",
                 ["Theme.System"] = "System",
                 ["Theme.Light"] = "Light",
                 ["Theme.Dark"] = "Dark",
                 ["Dashboard.UnsupportedWarning"] = "Real yay backend is limited to Arch Linux and CachyOS; using realistic Demo mode for {0}.",
+                ["Dashboard.YayMissingWarning"] = "yay was not found on PATH. Using realistic Demo mode until it's installed.",
 
                 ["Dashboard.Refresh"] = "Refresh",
                 ["Dashboard.Welcome"] = "Welcome back",
@@ -110,6 +112,12 @@ internal static class LocalizationResources
                 ["AuthPrompt.Cancel"] = "Cancel",
                 ["AuthPrompt.Authenticate"] = "Authenticate",
 
+                ["BackendInstall.Title"] = "yay is not installed",
+                ["BackendInstall.Body"] = "yay was not found on PATH. Install it now to switch from Demo mode to managing real packages on this system?",
+                ["BackendInstall.Confirm"] = "Install yay",
+                ["BackendInstall.Close"] = "Close",
+                ["BackendInstall.RestartHint"] = "yay was installed. Restart Yay See Sharp to switch to Real mode.",
+
                 ["Build.Title"] = "Building {0}",
                 ["Build.RunInBackground"] = "Run in background",
 
@@ -146,10 +154,12 @@ internal static class LocalizationResources
 
                 ["Backend.ModeReal"] = "Reálny",
                 ["Backend.ModeDemo"] = "Demo",
+                ["Backend.ModeUnavailable"] = "yay chýba",
                 ["Theme.System"] = "Systémová",
                 ["Theme.Light"] = "Svetlá",
                 ["Theme.Dark"] = "Tmavá",
                 ["Dashboard.UnsupportedWarning"] = "Reálny yay backend je obmedzený na Arch Linux a CachyOS; pre {0} sa používa realistický Demo režim.",
+                ["Dashboard.YayMissingWarning"] = "yay sa nenašiel na PATH. Kým sa nenainštaluje, používa sa realistický Demo režim.",
 
                 ["Dashboard.Refresh"] = "Obnoviť",
                 ["Dashboard.Welcome"] = "Vitajte späť",
@@ -238,6 +248,12 @@ internal static class LocalizationResources
                 ["AuthPrompt.Password"] = "Heslo",
                 ["AuthPrompt.Cancel"] = "Zrušiť",
                 ["AuthPrompt.Authenticate"] = "Overiť",
+
+                ["BackendInstall.Title"] = "yay nie je nainštalovaný",
+                ["BackendInstall.Body"] = "yay sa nenašiel na PATH. Nainštalovať ho teraz a prepnúť z Demo režimu na správu reálnych balíkov na tomto systéme?",
+                ["BackendInstall.Confirm"] = "Nainštalovať yay",
+                ["BackendInstall.Close"] = "Zavrieť",
+                ["BackendInstall.RestartHint"] = "yay bol nainštalovaný. Reštartujte Yay See Sharp na prepnutie do Reálneho režimu.",
 
                 ["Build.Title"] = "Zostavuje sa {0}",
                 ["Build.RunInBackground"] = "Spustiť na pozadí",

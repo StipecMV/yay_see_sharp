@@ -7,6 +7,8 @@ using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Scheduling;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class UpdateSchedulerTests
 {
     private static readonly TimeSpan TestPollInterval = TimeSpan.FromMilliseconds(20);
@@ -14,6 +16,8 @@ public class UpdateSchedulerTests
     private sealed class FakeClock : IClock
     {
         public DateTimeOffset UtcNow { get; set; }
+
+        public DateTimeOffset LocalNow { get; set; }
     }
 
     private sealed class FakeSettings : IUpdateScheduleSettings
@@ -49,10 +53,16 @@ public class UpdateSchedulerTests
         }
     }
 
-    [Test]
-    public async Task Scheduled_run_fires_once_the_clock_reaches_the_next_scheduled_time()
+    /// <summary>
+    /// Runs the scheduler against a fake clock fixed at "now" (in the given offset, standing in
+    /// for a user's local timezone), with the schedule time already behind "now" so the next run
+    /// lands the following day — then jumps the fake clock there and asserts the check fires
+    /// exactly at that local time, not the UTC equivalent.
+    /// </summary>
+    private static async Task AssertScheduledRunFiresAtLocalTime(TimeSpan localOffset)
     {
-        var clock = new FakeClock { UtcNow = new DateTimeOffset(2026, 1, 1, 9, 0, 0, TimeSpan.Zero) };
+        var now = new DateTimeOffset(2026, 1, 15, 9, 0, 0, localOffset);
+        var clock = new FakeClock { LocalNow = now, UtcNow = now.ToUniversalTime() };
         var settings = new FakeSettings { AutoUpdateCheckEnabled = true, UpdateScheduleTime = new TimeOnly(8, 0) };
         var updates = new[] { new UpdateInfo("firefox", "1.0", "2.0", PackageSource.Official, 0) };
         var backend = CreateBackend(updates);
@@ -69,10 +79,11 @@ public class UpdateSchedulerTests
             await scheduler.StartAsync();
             await WaitUntilAsync(() => scheduler.NextScheduledRun is not null, TimeSpan.FromSeconds(2));
 
-            // The schedule time (08:00) is already behind "now" (09:00), so the next run lands
-            // tomorrow at 08:00 — jump the fake clock there instead of waiting a real day.
-            clock.UtcNow = scheduler.NextScheduledRun!.Value.AddSeconds(1);
+            var nextRun = scheduler.NextScheduledRun!.Value;
+            await Assert.That(nextRun.Offset).IsEqualTo(localOffset);
+            await Assert.That(nextRun.Hour).IsEqualTo(8);
 
+            clock.LocalNow = nextRun.AddSeconds(1);
             await WaitUntilAsync(() => received is not null, TimeSpan.FromSeconds(2));
         }
         finally
@@ -86,9 +97,30 @@ public class UpdateSchedulerTests
     }
 
     [Test]
+    public async Task Scheduled_run_fires_at_the_configured_time_in_utc()
+    {
+        await AssertScheduledRunFiresAtLocalTime(TimeSpan.Zero);
+    }
+
+    [Test]
+    public async Task Scheduled_run_fires_at_the_configured_local_time_in_bratislava_winter_offset()
+    {
+        // CET (winter): UTC+1.
+        await AssertScheduledRunFiresAtLocalTime(TimeSpan.FromHours(1));
+    }
+
+    [Test]
+    public async Task Scheduled_run_fires_at_the_configured_local_time_in_bratislava_summer_offset()
+    {
+        // CEST (summer/DST): UTC+2 — a scheduler comparing against UTC instead of local time
+        // would fire this two hours late.
+        await AssertScheduledRunFiresAtLocalTime(TimeSpan.FromHours(2));
+    }
+
+    [Test]
     public async Task Disabled_scheduler_never_checks_for_updates_or_reports_a_next_run()
     {
-        var clock = new FakeClock { UtcNow = DateTimeOffset.UtcNow };
+        var clock = new FakeClock { LocalNow = DateTimeOffset.Now };
         var settings = new FakeSettings { AutoUpdateCheckEnabled = false, UpdateScheduleTime = new TimeOnly(0, 0) };
         var backend = CreateBackend([]);
         var scheduler = new UpdateScheduler(clock, backend.Object, settings, TestPollInterval);
@@ -110,7 +142,7 @@ public class UpdateSchedulerTests
     [Test]
     public async Task Stop_cancels_the_background_loop_and_clears_the_next_scheduled_run()
     {
-        var clock = new FakeClock { UtcNow = DateTimeOffset.UtcNow };
+        var clock = new FakeClock { LocalNow = DateTimeOffset.Now };
         var settings = new FakeSettings { AutoUpdateCheckEnabled = true, UpdateScheduleTime = new TimeOnly(0, 0) };
         var backend = CreateBackend([]);
         var scheduler = new UpdateScheduler(clock, backend.Object, settings, TestPollInterval);
@@ -126,9 +158,62 @@ public class UpdateSchedulerTests
     }
 
     [Test]
+    public async Task Changing_the_schedule_time_mid_run_invalidates_the_cached_next_run()
+    {
+        var clock = new FakeClock { LocalNow = new DateTimeOffset(2026, 1, 15, 9, 0, 0, TimeSpan.Zero) };
+        var settings = new FakeSettings { AutoUpdateCheckEnabled = true, UpdateScheduleTime = new TimeOnly(20, 0) };
+        var backend = CreateBackend([]);
+        var scheduler = new UpdateScheduler(clock, backend.Object, settings, TestPollInterval);
+
+        try
+        {
+            await scheduler.StartAsync();
+            await WaitUntilAsync(() => scheduler.NextScheduledRun is not null, TimeSpan.FromSeconds(2));
+            await Assert.That(scheduler.NextScheduledRun!.Value.Hour).IsEqualTo(20);
+
+            settings.UpdateScheduleTime = new TimeOnly(21, 30);
+
+            await WaitUntilAsync(
+                () => scheduler.NextScheduledRun is { } next && next.Hour == 21 && next.Minute == 30,
+                TimeSpan.FromSeconds(2));
+        }
+        finally
+        {
+            await scheduler.StopAsync();
+        }
+    }
+
+    [Test]
+    public async Task Disabling_then_re_enabling_recomputes_the_next_run_from_scratch()
+    {
+        var clock = new FakeClock { LocalNow = new DateTimeOffset(2026, 1, 15, 9, 0, 0, TimeSpan.Zero) };
+        var settings = new FakeSettings { AutoUpdateCheckEnabled = true, UpdateScheduleTime = new TimeOnly(20, 0) };
+        var backend = CreateBackend([]);
+        var scheduler = new UpdateScheduler(clock, backend.Object, settings, TestPollInterval);
+
+        try
+        {
+            await scheduler.StartAsync();
+            await WaitUntilAsync(() => scheduler.NextScheduledRun is not null, TimeSpan.FromSeconds(2));
+
+            settings.AutoUpdateCheckEnabled = false;
+            await WaitUntilAsync(() => scheduler.NextScheduledRun is null, TimeSpan.FromSeconds(2));
+
+            settings.AutoUpdateCheckEnabled = true;
+            await WaitUntilAsync(() => scheduler.NextScheduledRun is not null, TimeSpan.FromSeconds(2));
+
+            await Assert.That(scheduler.NextScheduledRun!.Value.Hour).IsEqualTo(20);
+        }
+        finally
+        {
+            await scheduler.StopAsync();
+        }
+    }
+
+    [Test]
     public async Task Concurrent_checks_are_serialized_so_a_second_trigger_is_skipped_not_queued()
     {
-        var clock = new FakeClock { UtcNow = DateTimeOffset.UtcNow };
+        var clock = new FakeClock { LocalNow = DateTimeOffset.Now };
         var settings = new FakeSettings { AutoUpdateCheckEnabled = false, UpdateScheduleTime = new TimeOnly(0, 0) };
         var gate = new TaskCompletionSource();
         var backend = new Mock<IPackageBackend>();

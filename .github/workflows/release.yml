@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, e.g. 1.0.0 (no leading "v" — the tag gets that prefixed automatically)'
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Build, verify, and publish v${{ github.event.inputs.version }}
+    runs-on: [self-hosted, cachyos]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate version input
+        run: |
+          if ! [[ "${{ github.event.inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must be plain semver (e.g. 1.0.0), got '${{ github.event.inputs.version }}'"
+            exit 1
+          fi
+
+      - name: Restore
+        run: dotnet restore yay_see_sharp.slnx
+
+      - name: Build (Debug) — sanity check before Release build
+        run: dotnet build yay_see_sharp.slnx --configuration Debug --no-restore
+
+      # All 5 test projects must pass before anything gets published — a release is exactly the
+      # one workflow where "tests are green" has to be actually true, not just usually true.
+      - name: Test — domain
+        run: dotnet run --project tests/yay_see_sharp.domain.Tests --configuration Debug --no-build
+
+      - name: Test — infrastructure
+        run: dotnet run --project tests/yay_see_sharp.infrastructure.Tests --configuration Debug --no-build
+
+      - name: Test — application
+        run: dotnet run --project tests/yay_see_sharp.application.Tests --configuration Debug --no-build
+
+      - name: Test — e2e (Avalonia Headless)
+        run: dotnet run --project tests/yay_see_sharp.e2e.Tests --configuration Debug --no-build
+
+      - name: Test — integration (real network/filesystem/yay, this runner is Arch)
+        env:
+          YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS: "1"
+        run: dotnet run --project tests/yay_see_sharp.integration.Tests --configuration Debug --no-build
+
+      - name: Publish (Release)
+        run: >
+          dotnet publish source/yay_see_sharp.application/yay_see_sharp.application.csproj
+          --configuration Release
+          --output publish/yay_see_sharp
+
+      - name: Zip artifact
+        run: |
+          cd publish
+          zip -r "yay_see_sharp-v${{ github.event.inputs.version }}-linux-x64.zip" yay_see_sharp
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          gh release create "v${{ github.event.inputs.version }}"
+          "publish/yay_see_sharp-v${{ github.event.inputs.version }}-linux-x64.zip"
+          --title "v${{ github.event.inputs.version }}"
+          --generate-notes

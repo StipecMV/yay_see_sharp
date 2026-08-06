@@ -9,6 +9,8 @@ using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
 
+namespace yay_see_sharp.application.Tests;
+
 public class PkgbuildViewModelTests
 {
     [Test]
@@ -94,10 +96,36 @@ public class PkgbuildViewModelTests
     }
 
     [Test]
-    public async Task A_null_service_falls_back_to_a_real_pkgbuild_service_instead_of_throwing()
+    public async Task Closing_while_a_fetch_is_in_flight_cancels_it_without_reporting_an_error()
     {
-        var viewModel = new PkgbuildViewModel("neovim", PackageSource.Aur, pkgbuildService: null, new LocalizationService("en"));
+        var service = new Mock<IPkgbuildService>();
+        service.Setup(s => s.FetchAsync(It.IsAny<string>(), It.IsAny<PackageSource>(), It.IsAny<CancellationToken>()))
+            .Returns(async (string _, PackageSource _, CancellationToken token) =>
+            {
+                await Task.Delay(Timeout.Infinite, token);
+                return "unreachable — the delay above never completes normally";
+            });
+        var viewModel = new PkgbuildViewModel("firefox", PackageSource.Official, service.Object, new LocalizationService("en"));
 
-        await Assert.That(viewModel.TitleLabel).IsEqualTo("PKGBUILD — neovim");
+        var loadTask = viewModel.LoadAsync();
+        await Task.Delay(20); // let LoadAsync actually reach the in-flight await before closing
+        await viewModel.CloseCommand.Execute();
+        await loadTask;
+
+        await Assert.That(viewModel.ErrorMessage).IsNull();
+        await Assert.That(viewModel.Content).IsNull();
+        await Assert.That(viewModel.IsLoading).IsFalse();
+    }
+
+    [Test]
+    public async Task Closing_before_any_load_is_started_still_completes_the_wait_task()
+    {
+        var service = new Mock<IPkgbuildService>();
+        var viewModel = new PkgbuildViewModel("firefox", PackageSource.Official, service.Object, new LocalizationService("en"));
+
+        await viewModel.CloseCommand.Execute();
+
+        await Assert.That(viewModel.WaitForCloseAsync().IsCompleted).IsTrue();
+        service.Verify(s => s.FetchAsync(It.IsAny<string>(), It.IsAny<PackageSource>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 }

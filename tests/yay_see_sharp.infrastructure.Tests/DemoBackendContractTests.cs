@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.infrastructure.Demo;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 [InheritsTests]
 public sealed class DemoBackendContractTests : PackageBackendContractTestsBase
 {

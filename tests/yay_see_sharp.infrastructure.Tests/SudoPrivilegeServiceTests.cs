@@ -6,6 +6,8 @@ using Moq;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.infrastructure.Privilege;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class SudoPrivilegeServiceTests
 {
     [Test]

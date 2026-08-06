@@ -2,6 +2,8 @@ using System;
 using System.Threading.Tasks;
 using yay_see_sharp.domain.Scheduling;
 
+namespace yay_see_sharp.domain.Tests;
+
 public class UpdateScheduleCalculatorTests
 {
     [Test]

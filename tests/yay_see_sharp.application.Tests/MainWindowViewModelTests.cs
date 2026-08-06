@@ -1,10 +1,15 @@
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using Moq;
+using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Demo;
 using yay_see_sharp.infrastructure.Localization;
+using yay_see_sharp.infrastructure.Platform;
 using yay_see_sharp.infrastructure.Settings;
 using yay_see_sharp.application.ViewModels;
+
+namespace yay_see_sharp.application.Tests;
 
 public class MainWindowViewModelTests
 {
@@ -13,14 +18,17 @@ public class MainWindowViewModelTests
         LocalizationService? localization = null)
     {
         var localizationService = localization ?? new LocalizationService("en");
-        var settings = new SettingsViewModel(new FileSettingsStore(), localizationService, AppSettings.Default);
+        var pkgbuildService = Mock.Of<IPkgbuildService>();
+        var settings = new SettingsViewModel(
+            new FileSettingsStore(), localizationService, AppSettings.Default,
+            Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
         return new MainWindowViewModel(
             backend,
             localizationService,
             settings,
             new DashboardViewModel(backend, localizationService),
-            new SearchViewModel(backend, localizationService, settings),
-            new InstalledPackagesViewModel(backend, localizationService, settings));
+            new SearchViewModel(backend, localizationService, pkgbuildService, settings),
+            new InstalledPackagesViewModel(backend, localizationService, pkgbuildService, settings));
     }
 
     [Test]

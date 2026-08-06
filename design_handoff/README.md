@@ -1,7 +1,9 @@
 # Handoff: Yay See Sharp — Desktop UI
 
 ## Overview
-UI mockups for "Yay See Sharp", a graphical front-end for `yay`/`paru` (AUR helpers) on Arch Linux. Target implementation: **Avalonia UI (C#, XAML)**, native window chrome (no custom titlebar — window controls in the mockups are illustrative only, use the OS/DE default).
+UI mockups for "Yay See Sharp", a graphical front-end for `yay` (AUR helper) on Arch Linux. Target implementation: **Avalonia UI (C#, XAML)**, native window chrome (no custom titlebar — window controls in the mockups are illustrative only, use the OS/DE default).
+
+> **Implementation note:** the mockups below show a `yay`/`paru` engine picker. Only `yay` is actually implemented today — there is no `ParuPackageBackend`, so the running app's Settings screen offers `yay` alone (see `docs/implementation-status.md`, "Engine picker"). Treat every `paru` reference below as a **future feature**, not something to wire up a non-functional UI toggle for again.
 
 ## About the Design Files
 The bundled file (`design.html`) is an **HTML design reference** — a static prototype showing intended look, layout and states. It is not code to port directly. Recreate these screens as Avalonia Views/UserControls (XAML + C#) using Avalonia's styling system (Styles/ControlThemes, `DynamicResource` for theme colors), not by embedding HTML/WebView.

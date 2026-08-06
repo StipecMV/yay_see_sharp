@@ -2,6 +2,8 @@ using System.IO;
 using System.Threading.Tasks;
 using yay_see_sharp.infrastructure.Filesystem;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class FolderBrowserServiceTests
 {
     [Test]

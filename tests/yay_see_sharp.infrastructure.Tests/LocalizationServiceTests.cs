@@ -1,6 +1,8 @@
 using System.Threading.Tasks;
 using yay_see_sharp.infrastructure.Localization;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class LocalizationServiceTests
 {
     [Test]

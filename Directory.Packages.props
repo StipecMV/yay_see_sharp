@@ -1,13 +1,25 @@
 <Project>
   <ItemGroup>
     <!--
-      Avalonia core packages track 12.x (latest stable). Avalonia.ReactiveUI has not published a
-      12.x release yet upstream — 11.3.9 (its latest available version) is used as a best-effort
-      match; it is a thin AppBuilder.UseReactiveUI() scheduler-registration shim with no
-      dependency on Avalonia's internal rendering/control APIs, so it is expected to keep working
-      across the 11 -> 12 boundary. Avalonia.Diagnostics has no 12.x release either and, unlike
-      ReactiveUI, has no safe fallback story, so it has been dropped rather than left mismatched
-      (see the app csproj for the removal note).
+      ADR: Avalonia.ReactiveUI stays on 11.3.9 against a 12.x core (last re-verified against the
+      live NuGet v3-flatcontainer index — `avalonia.reactiveui/index.json` lists no 12.x version,
+      11.3.9 remains the newest). This is a deliberate residual-risk decision, not an oversight:
+
+        - It is a thin AppBuilder.UseReactiveUI() scheduler-registration shim (registers
+          RxApp.MainThreadScheduler = AvaloniaScheduler.Instance) with no dependency on Avalonia's
+          internal rendering/control APIs, so it is expected to keep working across the 11 -> 12
+          boundary.
+        - Regression coverage: tests/yay_see_sharp.e2e.Tests boots the real Avalonia 12.x app with
+          this exact package graph under Avalonia.Headless and exercises ReactiveCommand execution
+          end to end (navigation, search, theme/language switching, a real simulated click) — if
+          the ReactiveUI scheduler registration broke against the 12.x core, those tests would fail,
+          not just "the app looks fine in Debug".
+        - Re-check periodically: if a 12.x Avalonia.ReactiveUI release appears upstream, migrate to
+          it; do not guess at an unpublished/unverified version number to "match" the core packages.
+
+      Avalonia.Diagnostics has the same 12.x gap but, unlike ReactiveUI, has no safe fallback story
+      (it binds Avalonia's internal APIs directly), so it has been dropped rather than left
+      mismatched (see the app csproj for the removal note) instead of pinned like ReactiveUI is.
     -->
     <PackageVersion Include="Avalonia" Version="12.1.1" />
     <PackageVersion Include="Avalonia.Desktop" Version="12.1.1" />

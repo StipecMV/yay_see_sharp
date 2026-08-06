@@ -1,6 +1,8 @@
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.infrastructure.Yay;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 [InheritsTests]
 public sealed class YayBackendContractTests : PackageBackendContractTestsBase
 {

@@ -20,6 +20,7 @@ public sealed class UpdateScheduler : IUpdateScheduler
 
     private CancellationTokenSource? _cts;
     private Task? _loopTask;
+    private TimeOnly? _lastObservedScheduleTime;
 
     public UpdateScheduler(
         IClock clock,
@@ -112,7 +113,20 @@ public sealed class UpdateScheduler : IUpdateScheduler
             {
                 if (_settings.AutoUpdateCheckEnabled)
                 {
-                    var now = _clock.UtcNow;
+                    // The user picks the schedule time on their own clock, not UTC — comparing
+                    // against LocalNow (rather than UtcNow) is what makes "10:00" actually mean
+                    // 10:00 for the user, including across DST transitions (DateTimeOffset.Now's
+                    // Offset always reflects the current local UTC offset).
+                    if (_lastObservedScheduleTime != _settings.UpdateScheduleTime)
+                    {
+                        // A mid-session schedule change invalidates any cached target — otherwise
+                        // the scheduler would keep waiting for the old time instead of the newly
+                        // configured one.
+                        NextScheduledRun = null;
+                        _lastObservedScheduleTime = _settings.UpdateScheduleTime;
+                    }
+
+                    var now = _clock.LocalNow;
 
                     // GetNextRun always returns a time strictly after the "now" passed to it, so
                     // the target is computed once and cached — recomputing it every tick from the
@@ -122,12 +136,16 @@ public sealed class UpdateScheduler : IUpdateScheduler
                     if (now >= NextScheduledRun.Value)
                     {
                         await TryRunCheckNowAsync(cancellationToken);
-                        NextScheduledRun = UpdateScheduleCalculator.GetNextRun(_clock.UtcNow, _settings.UpdateScheduleTime);
+                        NextScheduledRun = UpdateScheduleCalculator.GetNextRun(_clock.LocalNow, _settings.UpdateScheduleTime);
                     }
                 }
                 else
                 {
+                    // Disabling (or never having enabled) auto-update-check clears both the
+                    // cached target and the last-observed time, so re-enabling always starts from
+                    // a clean recompute rather than a stale target from before it was turned off.
                     NextScheduledRun = null;
+                    _lastObservedScheduleTime = null;
                 }
 
                 await Task.Delay(_pollInterval, cancellationToken);

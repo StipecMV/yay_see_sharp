@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 /// <summary>Package names a concrete contract test fixture wires up so the shared assertions below apply equally to DemoPackageBackend and a faked YayPackageBackend.</summary>
 public sealed record ContractPackages(
     string NotInstalled,
@@ -144,6 +146,7 @@ public abstract class PackageBackendContractTestsBase
     {
         var backend = CreateBackend();
         using var cts = new CancellationTokenSource();
+
         cts.Cancel();
 
         var progress = await CollectAsync(backend.UpdateAsync([], cts.Token));

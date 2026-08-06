@@ -7,6 +7,8 @@ using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.infrastructure.Notifications;
 using yay_see_sharp.infrastructure.Process;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class NotifySendNotificationServiceTests
 {
     [Test]

@@ -1,7 +1,7 @@
 # Yay See Sharp
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Tests](https://img.shields.io/badge/tests-188%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-232%20passed-brightgreen)
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 ![Avalonia](https://img.shields.io/badge/Avalonia%20UI-12.x-6E40C9)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
@@ -30,7 +30,7 @@ A fast, minimal desktop GUI for the [`yay`](https://github.com/Jguer/yay) AUR he
 
 - **Search** the official repositories and the AUR side by side, filterable by source
 - **Install / uninstall / update** with live, streamed command output and a cancellable progress modal
-- **Automatic backend detection** — real `yay` on Arch Linux/CachyOS, a realistic in-memory **Demo mode** everywhere else (safe to explore on any distro, never touches the host)
+- **Automatic backend detection** — real `yay` on Arch Linux/CachyOS *with `yay` on PATH*, a realistic in-memory **Demo mode** everywhere else (safe to explore on any distro, never touches the host); on Arch/CachyOS *without* `yay`, the app offers to install it instead of silently pretending Real mode works
 - **Scheduled background update checks** with desktop notifications
 - **In-app PKGBUILD viewer** — fetched straight from the AUR, no browser round-trip
 - **Orphan cleanup** on uninstall, configurable as a default
@@ -55,6 +55,8 @@ dotnet run --project source/yay_see_sharp.application/yay_see_sharp.application.
 ```
 
 The active mode is detected automatically at startup: Arch Linux/CachyOS with `yay` installed runs in **Real mode**; everything else runs in **Demo mode** with simulated data.
+
+> **Real mode status:** the Real backend (`YayPackageBackend`) is implemented and covered by unit/contract tests against a faked `yay`/`pacman` process runner — it has **not** been run against a live Arch/CachyOS host with real `yay` in this repository's own CI. Demo mode, all headless E2E UI tests, and the architecture/composition-root checks *are* verified automatically on every build. See [`docs/implementation-status.md`](docs/implementation-status.md) for the exact test-level breakdown (unit vs. integration vs. "needs a real Arch host").
 
 ## Architecture
 

@@ -11,7 +11,9 @@ public sealed record DistributionSnapshot(
 public interface IDistributionDetector
 {
     DistributionSnapshot Detect();
-    BackendInfo CreateBackendInfo(DistributionSnapshot distribution);
+
+    /// <param name="yayAvailable">Whether `yay` was actually found on PATH — the caller (PackageBackendFactory) is the single place that resolves this via IEngineDetector, so distribution identity and engine availability never diverge.</param>
+    BackendInfo CreateBackendInfo(DistributionSnapshot distribution, bool yayAvailable);
 }
 
 public sealed class LinuxDistributionDetector : IDistributionDetector
@@ -48,18 +50,29 @@ public sealed class LinuxDistributionDetector : IDistributionDetector
         return new DistributionSnapshot(id, name, desktop, session);
     }
 
-    public BackendInfo CreateBackendInfo(DistributionSnapshot distribution)
+    public BackendInfo CreateBackendInfo(DistributionSnapshot distribution, bool yayAvailable)
     {
         var isArch = distribution.Id is "arch" or "cachyos";
-        return isArch
-            ? new BackendInfo(distribution.Id, distribution.Name, "yay", BackendMode.Real, true)
-            : new BackendInfo(
+        if (!isArch)
+        {
+            return new BackendInfo(
                 distribution.Id,
                 distribution.Name,
                 "demo",
                 BackendMode.Demo,
                 false,
                 "Real yay backend is limited to Arch Linux and CachyOS; using realistic Demo mode.");
+        }
+
+        return yayAvailable
+            ? new BackendInfo(distribution.Id, distribution.Name, "yay", BackendMode.Real, true)
+            : new BackendInfo(
+                distribution.Id,
+                distribution.Name,
+                "demo",
+                BackendMode.Unavailable,
+                false,
+                "yay was not found on PATH. Install it to use Real mode, or continue in Demo mode.");
     }
 
     private string FirstEnvironmentValue(params string[] names) => names

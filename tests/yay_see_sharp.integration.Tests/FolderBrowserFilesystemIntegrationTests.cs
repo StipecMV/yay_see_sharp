@@ -1,5 +1,6 @@
 using System.Reactive.Linq;
 using TUnit.Core;
+using yay_see_sharp.infrastructure.Filesystem;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
 
@@ -19,7 +20,7 @@ public class FolderBrowserFilesystemIntegrationTests
         try
         {
             var tempRoot = Path.TrimEndingDirectorySeparator(Path.GetTempPath());
-            var viewModel = new FolderBrowserViewModel(tempRoot, new LocalizationService("en"));
+            var viewModel = new FolderBrowserViewModel(tempRoot, new LocalizationService("en"), new FolderBrowserService());
 
             await Assert.That(viewModel.Children.Count).IsGreaterThan(0);
 

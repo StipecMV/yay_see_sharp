@@ -1,0 +1,55 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:yay_see_sharp.application.ViewModels"
+             xmlns:icons="using:yay_see_sharp.application.Views.Icons"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="420" d:DesignHeight="320"
+             x:Class="yay_see_sharp.application.Views.BackendInstallPromptView"
+             x:DataType="vm:BackendInstallPromptViewModel">
+
+    <Border Width="420" Background="{DynamicResource Brush.Surface}" CornerRadius="14" Padding="22">
+        <StackPanel Spacing="14">
+
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Width="38" Height="38" CornerRadius="9" Background="{DynamicResource Brush.AccentTint}">
+                    <icons:DetectIcon Width="17" Height="17" Stroke="{DynamicResource Brush.Accent}"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="{Binding TitleLabel}" FontSize="16" FontWeight="Medium"
+                           Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
+            </StackPanel>
+
+            <TextBlock Text="{Binding BodyLabel}" FontSize="12.5" LineHeight="19"
+                       Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+
+            <Border Background="{DynamicResource Brush.Background}" CornerRadius="8" Padding="10">
+                <TextBlock Text="{Binding DisplayCommand}" FontFamily="{DynamicResource Font.Monospace}"
+                           FontSize="11.5" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+            </Border>
+
+            <StackPanel Spacing="8" IsVisible="{Binding Operation, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Operation.Percent}" Height="4"
+                             Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"/>
+                <TextBlock Text="{Binding Operation.StageLabel}" FontSize="11.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+                <Border Background="{DynamicResource Brush.Background}" CornerRadius="8" Padding="10" Height="90">
+                    <ScrollViewer>
+                        <TextBlock Text="{Binding Operation.OutputText}" FontFamily="{DynamicResource Font.Monospace}"
+                                   FontSize="11" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+                    </ScrollViewer>
+                </Border>
+            </StackPanel>
+
+            <TextBlock Text="{Binding RestartHintLabel}" FontSize="12" FontWeight="Medium"
+                       Foreground="{DynamicResource Brush.Accent}" TextWrapping="Wrap"
+                       IsVisible="{Binding ShowRestartHint}"/>
+
+            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
+                <Button Grid.Column="1" Classes="neutral" Content="{Binding CloseLabel}" Command="{Binding CloseCommand}" Margin="0,0,8,0"/>
+                <Button Grid.Column="2" Content="{Binding ConfirmLabel}" Command="{Binding ConfirmCommand}"/>
+            </Grid>
+
+        </StackPanel>
+    </Border>
+
+</UserControl>

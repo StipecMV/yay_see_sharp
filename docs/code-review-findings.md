@@ -974,22 +974,21 @@ Implementačný agent môže spúšťať neexistujúce príkazy, vyhodnocovať n
 
 ---
 
-## DOC-02 — `self-review.md` stále uvádza už opravený URL encoding finding
+## DOC-02 — Historický URL-encoding nález bol superseded a pôvodný self-review súbor bol odstránený
 
-**Závažnosť:** MEDIUM
-**Typ:** documentation drift
+**Závažnosť:** LOW
+**Typ:** documentation drift / historical record
 
 ### Lokalizácia
 
 ```text
-docs/self-review.md:11
-docs/self-review.md:85-92
-docs/self-review.md:139-140
+docs/self-review.md — súbor bol odstránený
+source/yay_see_sharp.infrastructure/Http/PkgbuildService.cs:23-29
 ```
 
 ### Aktuálny stav
 
-Self-review tvrdí, že `PkgbuildService` interpoluje package name bez URL encodingu a odporúča `Uri.EscapeDataString(packageName)`.
+Pôvodný self-review uvádzal URL encoding ako otvorený problém a odporúčal `Uri.EscapeDataString(packageName)`. Súbor `docs/self-review.md` už bol odstránený, preto staré lokalizácie v tomto review dokumente nesmú byť interpretované ako aktuálny aktívny súbor.
 
 Aktuálny kód už obsahuje:
 
@@ -997,25 +996,20 @@ Aktuálny kód už obsahuje:
 var escaped = Uri.EscapeDataString(packageName);
 ```
 
-v:
-
-```text
-source/yay_see_sharp.infrastructure/Http/PkgbuildService.cs:23-29
-```
-
 ### Prečo je to problém
 
-Dokumentácia odporúča agentovi opravu, ktorá už existuje, a môže viesť k zbytočnej alebo duplicitnej zmene.
+Ak zostane historický text bez vysvetlenia, implementačný agent môže hľadať neexistujúci súbor alebo opakovať už vyriešenú opravu.
 
 ### Návrh opravy
 
-- Označiť URL encoding ako opravený v register fixov.
-- Odstrániť ho z otvorených remediation steps.
-- Ak zostane HTTP concern, ponechať iba aktuálny cancellation/timeout finding DOC/FEATURE podľa FINDING-13.
+- Tento bod ponechať iba ako historický register, nie ako otvorený source-code finding.
+- Nespúšťať žiadnu ďalšiu zmenu pre URL encoding bez nového konkrétneho reprodukovateľného problému.
+- Aktuálne HTTP lifecycle otázky rieši `FINDING-13`.
 
 ### Akceptačné kritériá
 
-- Self-review nesmie uvádzať opravený bug ako otvorený nález.
+- Dokument neodkazuje na `docs/self-review.md` ako na aktuálny súbor.
+- URL encoding je označený ako uzavretý.
 
 ---
 
@@ -1084,21 +1078,18 @@ README a status prezentujú ako hotové najmä:
 - package detail flow,
 - backend detection.
 
-Review potvrdil, že Real backend má otvorené problémy FINDING-01 až FINDING-05, najmä:
+Pôvodné review potvrdilo problémy FINDING-01 až FINDING-05. Claude ich v working tree implementačne riešil; aktuálne residual riziká sú zapísané ako `NEW-04` a `NEW-05` a real-Arch runtime stále nebol overený.
 
-- yay prerequisite nie je súčasťou detection,
-- statistics sú iba čiastočné,
-- nenainštalované detaily používajú nevhodný query,
-- AUR/Official classification je neúplná,
-- scheduler čas je UTC namiesto deklarovaného user time.
+- timezone/DST pravidlá ešte nie sú overené cez skutočný transition date (`NEW-04`),
+- `pacman -Qm` sa stále mapuje priamo na AUR namiesto Foreign/Unknown (`NEW-05`),
+- real-Arch behavior nebol overený na skutočnom Arch/CachyOS hoste.
 
 ### Návrh opravy
 
 Kým sa findings neopraví:
 
-- označiť Real mode ako partial/Arch-host pending,
-- oddeliť Demo mode verified od real host verification,
-- neuvádzať štatistiky ako plne implementované,
+- ponechať oddelenie Demo verification vs. real-Arch verification,
+- vyriešiť `NEW-04` a `NEW-05`,
 - uviesť presný stav gated Arch tests,
 - aktualizovať README až po skutočnom runtime overení.
 
@@ -1111,52 +1102,612 @@ Po oprave findings aktualizovať status podľa reálneho test outputu.
 
 ---
 
-## DOC-05 — Chýba automatizovaná CI verifikácia a README badge je statický
+## DOC-05 — CI workflow existuje, ale security a reproducibility problémy zostávajú
 
 **Závažnosť:** LOW/MEDIUM
-**Typ:** release/process gap
+**Typ:** release/process gap / superseded documentation
 
 ### Lokalizácia
 
 ```text
 README.md:3-5
-.github/workflows/ — aktuálne neexistuje
+.github/workflows/ci.yml
+.github/workflows/release.yml
 ```
 
 ### Aktuálny stav
 
-README obsahuje statický badge:
+Claude pridal do working tree:
 
-```text
-Tests: 188 passed
-```
+- `.github/workflows/ci.yml`,
+- `.github/workflows/release.yml`.
 
-V repozitári som nenašiel GitHub Actions workflow. Badge sa teda automaticky nemení a nezachytáva:
+Pôvodné tvrdenie, že `.github/workflows` neexistuje, je preto zastarané. CI už obsahuje build, test a vulnerability scan kroky.
 
-- nové build regressions,
-- failed testy,
-- skipped testy,
-- package vulnerability stav.
+Zostávajúce problémy sú:
+
+- self-hosted CachyOS runner prijíma `pull_request` a spúšťa PR kód — pozri `NEW-01`,
+- Debug/Release buildy používajú spoločný output path a CI následne používa `--no-build` — pozri `NEW-08`,
+- README Tests badge je statický a nie je priamo naviazaný na GitHub Actions status,
+- release workflow spúšťa destructive Arch integration tests na self-hosted runneri bez explicitného approval gate.
 
 ### Návrh opravy
 
-Pridajte CI workflow, ktorý:
-
-1. obnoví solution,
-2. buildne Debug aj Release,
-3. spustí domain/infrastructure/application/e2e tests,
-4. spustí integration tests bez deštruktívneho Arch gate alebo s jasným skip reportom,
-5. vykoná `dotnet list ... package --vulnerable --include-transitive`,
-6. vykoná `git diff --check`/relevant lint,
-7. publikuje test artifacts.
-
-README badge nech odkazuje na CI a nesmie byť ručne tvrdený ako aktuálny, ak nemá automatický source.
+- Odstrániť staré tvrdenie „CI neexistuje“.
+- Opraviť bezpečnostný model podľa `NEW-01`.
+- Opraviť configuration isolation podľa `NEW-08`.
+- README badge nahradiť skutočným GitHub Actions status badge alebo ho označiť ako manuálne aktualizovaný.
+- Release workflow chrániť explicitným approval/environment gate.
 
 ### Akceptačné kritériá
 
-- Clean checkout vie reprodukovateľne spustiť CI.
-- CI jasne oddeľuje passed, failed a skipped.
-- Destructive Arch testy sa nikdy nespustia automaticky na nevhodnom hoste.
+- Review dokument opisuje aktuálny stav CI.
+- PR workflow nespúšťa nedôveryhodný kód na osobnom persistentnom Arch hoste.
+- CI testuje presnú konfiguráciu, ktorú uvádza v názve kroku.
+- Release/destructive workflow vyžaduje explicitné schválenie.
+
+---
+
+# 2A. Residual nálezy po Claude fixoch
+
+Nasledujúce nálezy vznikli pri druhom review po implementácii fixov. Nejde o opakovanie už opravených bodov. Pri každom je uvedené, čo bolo opravené a čo ešte zostáva.
+
+---
+
+## NEW-01 — Self-hosted CachyOS runner spúšťa neoverený PR kód na persistentnom hoste
+
+**Závažnosť:** HIGH; pri verejnom repository potenciálne CRITICAL
+**Typ:** cybersecurity / CI isolation
+**Oblasť:** GitHub Actions, untrusted pull requests, self-hosted runner
+
+### Lokalizácia
+
+```text
+.github/workflows/ci.yml:3-7
+.github/workflows/ci.yml:15-20
+.github/workflows/ci.yml:23-54
+.github/workflows/release.yml:11-20
+```
+
+### Aktuálny stav
+
+CI workflow reaguje na pull requesty:
+
+```yaml
+on:
+  pull_request:
+    branches: [main, develop]
+```
+
+a používa:
+
+```yaml
+runs-on: [self-hosted, cachyos]
+```
+
+Následne checkoutne a spustí kód z PR:
+
+```yaml
+- uses: actions/checkout@v4
+- run: dotnet build ...
+- run: dotnet run ...
+```
+
+Pri CI integration kroku sa navyše nastavuje:
+
+```yaml
+YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS: "1"
+```
+
+### Prečo je to problém
+
+PR môže meniť C# testy, `.csproj`, MSBuild targety, build properties, shell skripty alebo test commands. Tento kód sa vykoná na trvalom self-hosted CachyOS hoste, kde môže:
+
+- spúšťať ľubovoľné príkazy,
+- čítať lokálne súbory a credentials runner používateľa,
+- meniť stav systému alebo používateľského profilu,
+- používať `sudo`, `pacman` alebo package operations,
+- spúšťať deštruktívne Arch testy,
+- zanechať kompromitovaný stav pre ďalšie workflow behy.
+
+GitHub security guidance odporúča nepúšťať nedôveryhodný PR kód na persistentnom self-hosted runneri bez silnej izolácie.
+
+### Návrh opravy
+
+Odporúčaná stratégia:
+
+1. `pull_request` CI spúšťať na GitHub-hosted `ubuntu-24.04` runneri.
+2. Na PR workflow spúšťať iba bezpečné build/unit/Demo/headless E2E testy.
+3. Self-hosted CachyOS runner rezervovať pre:
+   - manuálny `workflow_dispatch`,
+   - trusted push do `main`,
+   - alebo explicitne schválené interné PR.
+4. Real Arch destructive tests presunúť do samostatného manuálneho workflow.
+5. Self-hosted runner nesmie obsahovať osobné SSH keys, broad credentials ani široké `NOPASSWD` sudo pravidlá.
+6. Actions pinovať na commit SHA namiesto voľného `@v4`, ak má workflow slúžiť ako security boundary.
+7. Ak musí zostať self-hosted runner, použiť disposable VM/image a reset po každom jobe.
+
+### Povinné testy/verifikácia
+
+- Fork PR nesmie dostať job na CachyOS self-hosted runneri.
+- Bežný PR job musí prejsť na GitHub-hosted runneri bez destructive gate.
+- Manuálny Arch workflow musí mať explicitný approval/dispatch.
+- Overiť, že žiadny PR workflow nedostane osobné credentials runnera.
+
+### Akceptačné kritériá
+
+Nedôveryhodný PR nesmie spúšťať ľubovoľný PR kód na persistentnom osobnom CachyOS hoste.
+
+---
+
+## NEW-02 — Race pri mazaní activation socketu v `Dispose()` single-instance služby
+
+**Závažnosť:** MEDIUM
+**Typ:** concurrency/lifecycle
+**Oblasť:** single instance IPC
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.infrastructure/Platform/FileLockSingleInstanceService.cs:78-117
+```
+
+### Aktuálny stav
+
+`Dispose()` najprv uvoľní lock:
+
+```csharp
+_lockStream?.Dispose();
+_lockStream = null;
+```
+
+a až potom maže socket:
+
+```csharp
+File.Delete(_socketPath);
+```
+
+### Prečo je to problém
+
+Medzi týmito operáciami môže nová instancia:
+
+1. získať uvoľnený lock,
+2. vytvoriť nový listener,
+3. bindnúť nový `activate.sock`,
+4. starý proces následne socket vymaže.
+
+Nová živá instancia potom zostane bez funkčného activation endpointu.
+
+### Návrh opravy
+
+- Socket cleanup vykonať pred uvoľnením locku.
+- Po zastavení listenera odstrániť socket a až potom zavrieť lock stream.
+- Ešte bezpečnejšie je starý socket po uvoľnení locku nemažať vôbec, ak ďalšia instancia môže vytvoriť nový endpoint.
+- Zvážiť atomic startup protocol, v ktorom lock vlastní celý transition od listener cleanup po nový bind.
+
+### Povinné testy
+
+- paralelný dispose/acquire loop,
+- druhá instancia štartujúca počas dispose prvej,
+- activation request počas lifecycle transition,
+- nový listener musí zostať dostupný po získaní locku.
+
+### Akceptačné kritériá
+
+Starý proces nesmie po uvoľnení locku zmazať socket novej živej instancie.
+
+---
+
+## NEW-03 — `TryAcquire()` môže držať lock alebo vyhodiť výnimku, ak zlyhá listener
+
+**Závažnosť:** MEDIUM
+**Typ:** error handling/lifecycle
+**Oblasť:** single-instance startup
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.infrastructure/Platform/FileLockSingleInstanceService.cs:35-56
+source/yay_see_sharp.infrastructure/Platform/FileLockSingleInstanceService.cs:120-137
+```
+
+### Aktuálny stav
+
+Flow je:
+
+```csharp
+_lockStream = new FileStream(...);
+StartActivationListener();
+return true;
+```
+
+`StartActivationListener()` môže zlyhať pri:
+
+- permission error,
+- nepodporovanom Unix socket environment,
+- príliš dlhej socket path,
+- `Bind()` failure,
+- chybe pri stale socket cleanup.
+
+Lock stream je vtedy už získaný, ale cleanup nie je garantovaný.
+
+### Prečo je to problém
+
+Aplikácia môže pri štarte spadnúť na neobslúženej exception alebo držať lock bez funkčného listenera. Ďalší štart potom môže vyzerať ako „aplikácia už beží“, hoci prvá instancia sa nespustila správne.
+
+### Návrh opravy
+
+Urobiť acquire/listener startup transakčný:
+
+```text
+acquire lock
+start listener
+if listener fails:
+    dispose listener resources
+    dispose lock stream
+    return explicit failure
+```
+
+Rozlíšiť:
+
+- lock held by another instance,
+- runtime directory permission failure,
+- IPC listener failure.
+
+Bootstrap má dostať user-friendly error alebo bezpečný unavailable stav, nie nepozorovanú výnimku.
+
+### Povinné testy
+
+- Bind failure po úspešnom lock acquire,
+- permission denied,
+- socket path failure,
+- lock sa po listener failure uvoľní,
+- ďalšia instancia môže po failure korektne štartovať.
+
+### Akceptačné kritériá
+
+`TryAcquire()` nikdy nevráti úspech bez funkčného listenera a pri čiastočnom failure nezanechá lock.
+
+---
+
+## NEW-04 — Scheduler používa aktuálny offset namiesto timezone rules cez DST prechod
+
+**Závažnosť:** MEDIUM
+**Typ:** time-zone correctness
+**Oblasť:** update scheduler
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.domain/Scheduling/UpdateScheduleCalculator.cs:5-12
+source/yay_see_sharp.infrastructure/Scheduling/UpdateScheduler.cs:129-139
+source/yay_see_sharp.infrastructure/Platform/SystemClock.cs:9
+```
+
+### Aktuálny stav
+
+Scheduler už správne používa `LocalNow`, čo opravuje pôvodný UTC bug. Kalkulátor však tvorí target takto:
+
+```csharp
+new DateTimeOffset(
+    now.Year,
+    now.Month,
+    now.Day,
+    scheduledTime.Hour,
+    scheduledTime.Minute,
+    scheduledTime.Second,
+    now.Offset)
+```
+
+a nasledujúci deň počíta cez:
+
+```csharp
+candidate.AddDays(1)
+```
+
+To zachováva aktuálny offset a nevyhodnocuje timezone transition rules.
+
+### Prečo je to problém
+
+Pred prechodom CET → CEST alebo CEST → CET sa offset nasledujúceho dňa môže líšiť. Nastavenie „10:00 local time“ môže byť potom interným targetom posunuté o hodinu.
+
+Testy s pevnými offsetmi `+1` a `+2` overujú iba local offset model, nie skutočný prechod v `Europe/Bratislava`.
+
+### Návrh opravy
+
+Použiť timezone-aware výpočet:
+
+- `TimeZoneInfo.Local`,
+- lokálny `DateTime` bez starého offsetu,
+- `TimeZoneInfo.ConvertTimeToUtc`,
+- explicitne definované správanie pre neexistujúci čas pri spring-forward,
+- explicitne definované správanie pre duplicitný čas pri fall-back.
+
+### Povinné testy
+
+- deň pred jarným DST prechodom,
+- deň pred jesenným DST prechodom,
+- `Europe/Bratislava`,
+- schedule v čase `02:30` počas spring-forward,
+- schedule počas duplicated hour pri fall-back,
+- overenie, že používateľský wall-clock čas zostane správny.
+
+### Akceptačné kritériá
+
+Scheduler musí interpretovať `TimeOnly` ako wall-clock time používateľa aj cez skutočné DST transition dates.
+
+---
+
+## NEW-05 — `pacman -Qm` klasifikuje všetky foreign balíky ako AUR
+
+**Závažnosť:** MEDIUM
+**Typ:** data correctness
+**Oblasť:** AUR/Official/Foreign classification
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.infrastructure/Yay/PacmanQueryService.cs:46-53
+source/yay_see_sharp.infrastructure/Yay/YayOutputParser.cs:134-138
+source/yay_see_sharp.infrastructure/Yay/IPacmanQueryService.cs:10-11
+```
+
+### Aktuálny stav
+
+Backend spúšťa:
+
+```text
+pacman -Qm
+```
+
+a každý výsledok klasifikuje ako:
+
+```csharp
+PackageSource.Aur
+```
+
+### Prečo je to problém
+
+`pacman -Qm` znamená foreign packages — balíky, ktoré nie sú v aktuálne zapnutých repository databázach. Môže ísť o:
+
+- AUR balík,
+- manuálne stiahnutý Arch package,
+- balík z externého repository,
+- lokálne/firemne vytvorený balík,
+- balík odstránený z repository.
+
+Foreign package preto nie je automaticky AUR package.
+
+Nesprávna klasifikácia ovplyvňuje:
+
+- AUR count,
+- source tagy,
+- update source,
+- PKGBUILD endpoint,
+- používateľské očakávania pri správe balíka.
+
+### Návrh opravy
+
+Odporúčaná možnosť:
+
+1. Rozšíriť `PackageSource` o `Foreign` alebo `Unknown`.
+2. `pacman -Qm` mapovať na `Foreign`, nie `Aur`.
+3. AUR potvrdiť samostatným AUR metadata query/API alebo spoľahlivou yay metadata cestou.
+4. Ak overenie nie je možné, zobrazovať `Foreign/Unknown`.
+5. AUR statistics počítať iba z potvrdených AUR balíkov.
+
+### Povinné testy
+
+- official/native package,
+- AUR package,
+- manually installed foreign package,
+- external repository package,
+- source tag a PKGBUILD endpoint pre každý stav,
+- statistics count podľa potvrdeného source.
+
+### Akceptačné kritériá
+
+`AurCount` nesmie byť iba počet riadkov z `pacman -Qm`, pokiaľ je tento údaj v UI označený ako AUR.
+
+---
+
+## NEW-06 — Backend installer je deklarovaný ako otestovaný, ale nemá vlastné testy
+
+**Závažnosť:** MEDIUM
+**Typ:** missing test coverage / privileged flow
+**Oblasť:** missing `yay` installation
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.infrastructure/Yay/YayBackendInstaller.cs
+source/yay_see_sharp.application/ViewModels/BackendInstallPromptViewModel.cs
+source/yay_see_sharp.application/Views/BackendInstallPromptView.axaml
+docs/implementation-status.md:50
+```
+
+### Aktuálny stav
+
+Dokumentácia uvádza backend install flow ako:
+
+```text
+Hotové (kód + unit testy)
+```
+
+V test projekte však nie sú samostatné testy pre:
+
+- `YayBackendInstaller`,
+- `BackendInstallPromptViewModel`,
+- CachyOS `pacman` install path,
+- plain Arch `git clone` + `makepkg` path,
+- cancellation/failure/exception cleanup,
+- command preview.
+
+### Prečo je to problém
+
+Ide o privileged flow, ktorý môže:
+
+- spúšťať `sudo`,
+- klonovať AUR repository,
+- spúšťať `makepkg`,
+- meniť package database,
+- vytvárať a mazať temporary build directories.
+
+Existujúce backend tests nepokrývajú tento nový komponent.
+
+Ďalší problém je `BackendInstallPromptViewModel.ConfirmAsync()`, ktorý nemá vlastný `try/catch/finally` okolo async install streamu. Exception z installeru môže faultnúť command task a ponechať overlay/operation v nekonzistentnom stave. Počas bežiacej inštalácie je `CloseCommand` disabled, takže používateľ nemá explicitný cancel flow.
+
+### Návrh opravy
+
+- Pridať mockovaný `IBackendInstaller`.
+- Testovať CachyOS a plain Arch command paths.
+- Testovať success, failure, cancellation aj exception.
+- Testovať presné `CommandRequest` arguments a `WorkingDirectory`.
+- Pridať explicitný Cancel command počas operácie.
+- V `ConfirmAsync()` použiť `try/catch/finally` a user-facing error state.
+- Po failure musí byť možné prompt zavrieť a operation zopakovať.
+- Zabezpečiť cleanup temporary build directory aj pri exception/cancel.
+
+### Akceptačné kritériá
+
+Backend install flow má vlastné testy pre všetky paths a pri žiadnom error path nezostane zamrznutý modal ani privilegovaný child process.
+
+---
+
+## NEW-07 — `IEngineDetector` zostal v Infrastructure namespace a Application naň priamo závisí
+
+**Závažnosť:** MEDIUM
+**Typ:** architecture/DIP boundary
+**Oblasť:** composition root, assembly boundaries
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.application/ViewModels/SettingsViewModel.cs:6,13,36
+source/yay_see_sharp.infrastructure/Platform/EngineDetector.cs:5-10
+```
+
+### Aktuálny stav
+
+`SettingsViewModel` používa `IEngineDetector` z:
+
+```csharp
+using yay_see_sharp.infrastructure.Platform;
+```
+
+Reflection architecture test kontroluje concrete Infrastructure classes, ale nie interfaces z Infrastructure namespace. Preto test prejde, hoci Application assembly stále pozná Infrastructure namespace.
+
+### Prečo je to problém
+
+Deklarovaná architektúra hovorí, že ViewModels majú závisieť od domain/application abstractions a Infrastructure ich má implementovať. `IEngineDetector` je contract, preto patrí k abstractions podobne ako:
+
+- `ISettingsStore`,
+- `IFolderBrowserService`,
+- `IPkgbuildService`,
+- `IPrivilegeService`.
+
+### Návrh opravy
+
+- Presunúť `IEngineDetector` do `source/yay_see_sharp.domain/Abstractions`.
+- `EngineDetector` implementáciu ponechať v Infrastructure.
+- `SettingsViewModel` importovať iba domain abstractions.
+- Architecture test rozšíriť aj o interface types z `yay_see_sharp.infrastructure` namespace a o zakázané Infrastructure `using` directives vo ViewModels.
+- Design-time factory môže zostať explicitnou výnimkou, ale musí byť zdokumentovaná a testovaná ako non-production path.
+
+### Akceptačné kritériá
+
+Application/ViewModels pozná iba contract, nie namespace konkrétnej Infrastructure vrstvy.
+
+---
+
+## NEW-08 — CI Debug testy môžu po Release builde používať prepisované artefakty
+
+**Závažnosť:** LOW/MEDIUM
+**Typ:** CI correctness/reproducibility
+**Oblasť:** build output isolation
+
+### Lokalizácia
+
+```text
+.github/workflows/ci.yml:29-45
+source/*/*.csproj — spoločný OutputPath `output/bin`
+```
+
+### Aktuálny stav
+
+CI workflow najprv buildne:
+
+```yaml
+dotnet build ... --configuration Debug
+dotnet build ... --configuration Release
+```
+
+a potom spúšťa:
+
+```yaml
+dotnet run ... --configuration Debug --no-build
+```
+
+Projekty používajú spoločný `output/bin` bez configuration-specific output directory. Release build preto môže prepísať artefakty, ktoré následne používa Debug `--no-build` test run.
+
+### Prečo je to problém
+
+CI môže deklarovať, že spustila Debug testy, ale test process môže načítať posledné skompilované Release assembly. Výsledok je menej reprodukovateľný a môže skrývať configuration-specific regresiu.
+
+### Návrh opravy
+
+Vybrať jednu konzistentnú možnosť:
+
+1. Oddeliť output paths podľa `$(Configuration)`.
+2. Spustiť Debug tests pred Release buildom a explicitne overiť, že assembly paths sú Debug.
+3. Buildnúť a testovať Debug/Release v oddelených joboch.
+4. Nepoužívať `--no-build`, ak output path nie je configuration-specific.
+
+### Povinné testy/verifikácia
+
+- overiť path a timestamp načítanej test assembly,
+- Debug build + Debug tests,
+- Release build + Release smoke/test,
+- CI clean checkout bez zdieľaných stale artefacts.
+
+### Akceptačné kritériá
+
+Workflow testuje presne tú konfiguráciu, ktorú uvádza v názve kroku.
+
+---
+
+## NEW-09 — `DOC-05` v pôvodnom review už nezodpovedá aktuálnemu working tree
+
+**Závažnosť:** LOW/MEDIUM
+**Typ:** documentation drift
+
+### Lokalizácia
+
+```text
+docs/code-review-findings.md:1114-1159
+.github/workflows/ci.yml
+.github/workflows/release.yml
+```
+
+### Aktuálny stav
+
+Pôvodný `DOC-05` tvrdí, že v repozitári neexistuje `.github/workflows` CI pipeline. Claude však pridal:
+
+- `.github/workflows/ci.yml`,
+- `.github/workflows/release.yml`.
+
+Pôvodný nález je preto ako „CI neexistuje“ zastaraný. Jeho bezpečnostná podstata však zostáva otvorená a je teraz pokrytá `NEW-01`. Navyše README badge je stále statický a CI workflow badge automaticky neaktualizuje.
+
+### Návrh opravy
+
+- `DOC-05` preformulovať na: „CI existuje, ale treba opraviť self-hosted PR security a overiť reproducibility/configuration isolation“.
+- Duplicitné otvorenie „CI neexistuje“ odstrániť.
+- Odkázať na `NEW-01` a `NEW-08`.
+- README badge nahradiť skutočným GitHub Actions status badge alebo ho jasne označiť ako manuálne aktualizovaný.
+
+### Akceptačné kritériá
+
+Review dokument neobsahuje tvrdenie, že CI workflow neexistuje, keď už workflow v working tree existuje.
 
 ---
 
@@ -1183,7 +1734,7 @@ Nasledujúce body boli v aktuálnom working tree overené ako opravené. Impleme
 
 4. **Update scheduler exists:**
    - existuje background loop, cancellation, run lock a scheduler tests.
-   - Otvorený zostáva timezone/local-time problém z FINDING-05.
+   - UTC/local-time problém z FINDING-05 bol opravený; residual DST transition problém je `NEW-04`.
 
 5. **Desktop notification abstraction exists:**
    - existuje `INotificationService`, `NotifySendNotificationService`, `SettingsAwareNotificationService` a no-op fallback.
@@ -1192,12 +1743,12 @@ Nasledujúce body boli v aktuálnom working tree overené ako opravené. Impleme
 6. **Filesystem/HTTP I/O abstractions:**
    - `IFolderBrowserService` a `IPkgbuildService` existujú,
    - ViewModels už priamo nepoužívajú `Directory.*` ani `HttpClient` request API.
-   - Otvorený zostáva lifecycle/cancellation problém z FINDING-13.
+   - PKGBUILD lifecycle/cancellation z FINDING-13 bol opravený a otestovaný.
 
 7. **Fire-and-forget helper and operation cleanup:**
    - `Task.FireAndForget()` existuje,
    - hlavné install/uninstall/update flows majú `try/catch/finally`.
-   - Fire-and-forget lifecycle pri PKGBUILD fetchi má samostatný otvorený nález FINDING-13.
+   - PKGBUILD fetch cancellation z FINDING-13 je opravená; nové installer lifecycle chyby sú v `NEW-06`.
 
 8. **Demo/Yay contract tests:**
    - existujú shared contract tests nad Demo backendom a Fake Yay command runnerom.
@@ -1208,7 +1759,7 @@ Nasledujúce body boli v aktuálnom working tree overené ako opravené. Impleme
 
 10. **PKGBUILD URL encoding:**
     - `PkgbuildService` používa `Uri.EscapeDataString(packageName)`.
-    - Starý finding bez encodingu je uzavretý; aktuálny otvorený problém je iba cancellation/timeout podľa FINDING-13.
+    - Starý finding bez encodingu aj cancellation/timeout podľa FINDING-13 sú uzavreté.
 
 11. **Avalonia.Diagnostics mismatch:**
     - `Avalonia.Diagnostics` 11.x už nie je v application projecte.
@@ -1217,7 +1768,7 @@ Nasledujúce body boli v aktuálnom working tree overené ako opravené. Impleme
 12. **Shell command injection:**
     - v review nebol nájdený shell string execution,
     - process execution používa `UseShellExecute = false` a `ArgumentList`.
-    - FINDING-11 sa týka iba argument/option confusion hardening, nie klasického shell injection.
+    - FINDING-11 argument/option hardening bol implementovaný; nové overenie reálnej `yay` syntaxe zostáva súčasťou real-Arch verifikácie.
 
 ---
 

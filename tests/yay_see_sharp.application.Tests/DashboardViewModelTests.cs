@@ -11,6 +11,8 @@ using yay_see_sharp.infrastructure.Demo;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
 
+namespace yay_see_sharp.application.Tests;
+
 public class DashboardViewModelTests
 {
     [Test]

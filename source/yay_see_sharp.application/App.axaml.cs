@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using ReactiveUI;
 using yay_see_sharp.application.Platform;
 using yay_see_sharp.application.ViewModels;
@@ -45,6 +46,15 @@ namespace yay_see_sharp.application
 
                 var window = new MainWindow { DataContext = viewModel };
                 desktop.MainWindow = window;
+
+                // Fires on the single-instance service's socket-listener thread, never the UI
+                // thread — every touch of `window` below must go through the dispatcher.
+                _singleInstanceService.ActivationRequested += (_, _) => Dispatcher.UIThread.Post(() =>
+                {
+                    window.Show();
+                    window.WindowState = WindowState.Normal;
+                    window.Activate();
+                });
 
                 viewModel.Settings.WhenAnyValue(x => x.Theme).Subscribe(theme =>
                 {

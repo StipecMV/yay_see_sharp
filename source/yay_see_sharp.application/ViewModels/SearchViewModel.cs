@@ -11,6 +11,7 @@ namespace yay_see_sharp.application.ViewModels;
 public class SearchViewModel : LocalizedViewModelBase
 {
     private readonly IPackageBackend _backend;
+    private readonly IPkgbuildService _pkgbuildService;
     private readonly IUninstallPolicy? _uninstallPolicy;
     private readonly INotificationService? _notificationService;
     private string _query = string.Empty;
@@ -24,11 +25,13 @@ public class SearchViewModel : LocalizedViewModelBase
     public SearchViewModel(
         IPackageBackend backend,
         ILocalizationService localization,
+        IPkgbuildService pkgbuildService,
         IUninstallPolicy? uninstallPolicy = null,
         INotificationService? notificationService = null)
         : base(localization)
     {
         _backend = backend;
+        _pkgbuildService = pkgbuildService;
         _uninstallPolicy = uninstallPolicy;
         _notificationService = notificationService;
         _sourceOptions = BuildSourceOptions();
@@ -164,7 +167,7 @@ public class SearchViewModel : LocalizedViewModelBase
         }
 
         var details = new PackageDetailsViewModel(
-            _backend, package, Localization, uninstallPolicy: _uninstallPolicy, notificationService: _notificationService);
+            _backend, package, Localization, _pkgbuildService, uninstallPolicy: _uninstallPolicy, notificationService: _notificationService);
         SelectedDetails = details;
         details.LoadAsync().FireAndForget();
     }

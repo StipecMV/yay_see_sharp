@@ -2,6 +2,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using yay_see_sharp.infrastructure.Process;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class CommandRunnerTests
 {
     [Test]

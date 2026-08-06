@@ -4,6 +4,8 @@ using System.Windows.Input;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
 
+namespace yay_see_sharp.application.Tests;
+
 public class AuthPromptViewModelTests
 {
     [Test]

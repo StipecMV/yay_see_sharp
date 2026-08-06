@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using System.Reactive;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
-using yay_see_sharp.infrastructure.Filesystem;
 
 namespace yay_see_sharp.application.ViewModels;
 
@@ -22,10 +21,10 @@ public sealed class FolderBrowserViewModel : LocalizedViewModelBase
     private string _currentPath;
     private string _selectedPath;
 
-    public FolderBrowserViewModel(string startPath, ILocalizationService localization, IFolderBrowserService? folderBrowserService = null)
+    public FolderBrowserViewModel(string startPath, ILocalizationService localization, IFolderBrowserService folderBrowserService)
         : base(localization)
     {
-        _folderBrowserService = folderBrowserService ?? new FolderBrowserService();
+        _folderBrowserService = folderBrowserService;
         _currentPath = ResolveStartPath(startPath);
         _selectedPath = _currentPath;
 

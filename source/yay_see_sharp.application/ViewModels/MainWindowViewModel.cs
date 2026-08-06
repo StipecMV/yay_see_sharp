@@ -15,6 +15,8 @@ public class MainWindowViewModel : LocalizedViewModelBase
     private NavigationItemViewModel _selectedNavigationItem;
     private ViewModelBase _currentPage;
     private AuthPromptViewModel? _authPrompt;
+    private BackendInstallPromptViewModel? _backendInstallPrompt;
+    private readonly IBackendInstaller? _backendInstaller;
 
     public MainWindowViewModel(
         IPackageBackend backend,
@@ -22,10 +24,12 @@ public class MainWindowViewModel : LocalizedViewModelBase
         SettingsViewModel settings,
         DashboardViewModel dashboard,
         SearchViewModel search,
-        InstalledPackagesViewModel installed)
+        InstalledPackagesViewModel installed,
+        IBackendInstaller? backendInstaller = null)
         : base(localizationService)
     {
         Backend = backend;
+        _backendInstaller = backendInstaller;
         Loading = new LoadingViewModel(localizationService);
         Settings = settings;
         Dashboard = dashboard;
@@ -59,6 +63,20 @@ public class MainWindowViewModel : LocalizedViewModelBase
     {
         await Dashboard.InitialLoadTask;
         CurrentPage = ResolvePage(SelectedNavigationItem);
+
+        if (_backendInstaller is not null && Mode == BackendMode.Unavailable)
+        {
+            await RequestBackendInstallAsync();
+        }
+    }
+
+    /// <summary>Shows the "yay is missing, install it?" overlay. Resolves once the user confirms/dismisses/closes it — a successful install still requires a restart to actually switch backends (see AppBootstrapper), which the prompt's own text explains.</summary>
+    private async Task RequestBackendInstallAsync()
+    {
+        var prompt = new BackendInstallPromptViewModel(_backendInstaller!, Localization);
+        BackendInstallPrompt = prompt;
+        await prompt.WaitForResultAsync();
+        BackendInstallPrompt = null;
     }
 
     public LoadingViewModel Loading { get; }
@@ -83,16 +101,23 @@ public class MainWindowViewModel : LocalizedViewModelBase
 
     public BackendMode Mode => BackendInfo.Mode;
 
-    public string ModeLabel => Localization.GetString(
-        Mode == BackendMode.Real ? "Backend.ModeReal" : "Backend.ModeDemo");
+    public string ModeLabel => Localization.GetString(Mode switch
+    {
+        BackendMode.Real => "Backend.ModeReal",
+        BackendMode.Unavailable => "Backend.ModeUnavailable",
+        _ => "Backend.ModeDemo",
+    });
 
     public bool IsSupported => BackendInfo.IsSupported;
 
     public bool HasWarning => !IsSupported;
 
-    public string? WarningMessage => HasWarning
-        ? string.Format(Localization.GetString("Dashboard.UnsupportedWarning"), DistributionName)
-        : null;
+    public string? WarningMessage => Mode switch
+    {
+        BackendMode.Unavailable => Localization.GetString("Dashboard.YayMissingWarning"),
+        _ when HasWarning => string.Format(Localization.GetString("Dashboard.UnsupportedWarning"), DistributionName),
+        _ => null,
+    };
 
     public IReadOnlyList<NavigationItemViewModel> NavigationItems { get; }
 
@@ -129,6 +154,13 @@ public class MainWindowViewModel : LocalizedViewModelBase
         var result = await prompt.WaitForResultAsync();
         AuthPrompt = null;
         return result;
+    }
+
+    /// <summary>Non-null while the "yay is missing, install it?" overlay is shown — see <see cref="FinishLoadingAsync"/>.</summary>
+    public BackendInstallPromptViewModel? BackendInstallPrompt
+    {
+        get => _backendInstallPrompt;
+        private set => this.RaiseAndSetIfChanged(ref _backendInstallPrompt, value);
     }
 
     protected override void RaiseLocalizedPropertiesChanged()

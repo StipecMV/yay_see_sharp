@@ -3,14 +3,13 @@ using System.Reactive.Linq;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
-using yay_see_sharp.infrastructure.Notifications;
 
 namespace yay_see_sharp.application.ViewModels;
 
 public class PackageDetailsViewModel : LocalizedViewModelBase
 {
     private readonly IPackageBackend _backend;
-    private readonly IPkgbuildService? _pkgbuildService;
+    private readonly IPkgbuildService _pkgbuildService;
     private readonly IUninstallPolicy _uninstallPolicy;
     private readonly INotificationService _notificationService;
     private PackageDetails? _details;
@@ -23,7 +22,7 @@ public class PackageDetailsViewModel : LocalizedViewModelBase
         IPackageBackend backend,
         PackageSummary summary,
         ILocalizationService localization,
-        IPkgbuildService? pkgbuildService = null,
+        IPkgbuildService pkgbuildService,
         IUninstallPolicy? uninstallPolicy = null,
         INotificationService? notificationService = null)
         : base(localization)

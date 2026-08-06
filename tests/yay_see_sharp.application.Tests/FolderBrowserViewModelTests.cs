@@ -7,6 +7,8 @@ using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
 
+namespace yay_see_sharp.application.Tests;
+
 public class FolderBrowserViewModelTests
 {
     private const string Root = "/yss-root";

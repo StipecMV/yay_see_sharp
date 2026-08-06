@@ -7,10 +7,11 @@ using yay_see_sharp.infrastructure.Platform;
 
 namespace yay_see_sharp.application.ViewModels;
 
-public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpdateScheduleSettings, INotificationSettings
+public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpdateScheduleSettings, INotificationSettings, IBuildDirectoryPolicy
 {
     private readonly ISettingsStore _settingsStore;
     private readonly IEngineDetector _engineDetector;
+    private readonly IFolderBrowserService _folderBrowserService;
 
     private Task? _pendingSave;
     private bool _dirtyWhileSaving;
@@ -32,11 +33,13 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         ISettingsStore settingsStore,
         ILocalizationService localizationService,
         AppSettings initial,
-        IEngineDetector? engineDetector = null)
+        IEngineDetector engineDetector,
+        IFolderBrowserService folderBrowserService)
         : base(localizationService)
     {
         _settingsStore = settingsStore;
-        _engineDetector = engineDetector ?? new EngineDetector();
+        _engineDetector = engineDetector;
+        _folderBrowserService = folderBrowserService;
         _language = initial.Language;
         _theme = initial.Theme;
         _closeAction = initial.CloseAction;
@@ -306,7 +309,7 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
 
     private async Task BrowseForBuildDirectoryAsync()
     {
-        var browser = new FolderBrowserViewModel(BuildDirectory, Localization);
+        var browser = new FolderBrowserViewModel(BuildDirectory, Localization, _folderBrowserService);
         FolderBrowser = browser;
         var result = await browser.WaitForResultAsync();
         FolderBrowser = null;

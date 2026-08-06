@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.RegularExpressions;
 using yay_see_sharp.domain.Models;
 
@@ -54,7 +53,7 @@ public sealed class YayOutputParser : IYayOutputParser
         return packages;
     }
 
-    public PackageDetails? ParseInfo(string output)
+    public PackageDetails? ParseInfo(string output, PackageSource? sourceHint = null)
     {
         var fields = ParseFields(output);
         if (!fields.TryGetValue("Name", out var name) || string.IsNullOrWhiteSpace(name))
@@ -65,11 +64,16 @@ public sealed class YayOutputParser : IYayOutputParser
         var repository = fields.GetValueOrDefault("Repository", string.Empty);
         var version = fields.GetValueOrDefault("Version", string.Empty);
         var description = fields.GetValueOrDefault("Description", string.Empty);
-        var installedSize = ParseSize(fields.GetValueOrDefault("Installed Size", string.Empty));
+        var installedSize = PacmanSizeParser.ParseToBytes(fields.GetValueOrDefault("Installed Size", string.Empty));
         var state = fields.ContainsKey("Install Date")
             ? PackageState.Installed
             : PackageState.NotInstalled;
-        var source = IsAurRepository(repository) ? PackageSource.Aur : PackageSource.Official;
+        // The Repository field is authoritative when present (covers -Qi/-Si); a -Sia (AUR
+        // sync-info) response may omit it entirely, so the caller's sourceHint — which query path
+        // actually succeeded — is the fallback rather than silently defaulting to Official.
+        var source = repository.Length > 0
+            ? (IsAurRepository(repository) ? PackageSource.Aur : PackageSource.Official)
+            : sourceHint ?? PackageSource.Official;
         var summary = new PackageSummary(name, version, description, source, installedSize, state);
         var dependencies = ParseList(fields.GetValueOrDefault("Depends On", string.Empty))
             .Select(dependency => new PackageDependency(dependency, string.Empty, false))
@@ -80,7 +84,7 @@ public sealed class YayOutputParser : IYayOutputParser
         return new PackageDetails(summary, packager, homepage, dependencies, []);
     }
 
-    public IReadOnlyList<UpdateInfo> ParseUpdates(string output)
+    public IReadOnlyList<UpdateInfo> ParseUpdates(string output, IReadOnlySet<string>? foreignPackageNames = null)
     {
         var updates = new List<UpdateInfo>();
         foreach (var line in output.Split('\n'))
@@ -91,18 +95,19 @@ public sealed class YayOutputParser : IYayOutputParser
                 continue;
             }
 
+            var name = match.Groups["name"].Value;
             updates.Add(new UpdateInfo(
-                match.Groups["name"].Value,
+                name,
                 match.Groups["current"].Value,
                 match.Groups["available"].Value,
-                PackageSource.Official,
+                ClassifySource(name, foreignPackageNames),
                 0));
         }
 
         return updates;
     }
 
-    public IReadOnlyList<PackageSummary> ParseInstalled(string output)
+    public IReadOnlyList<PackageSummary> ParseInstalled(string output, IReadOnlySet<string>? foreignPackageNames = null)
     {
         var packages = new List<PackageSummary>();
         foreach (var line in output.Split('\n'))
@@ -113,17 +118,24 @@ public sealed class YayOutputParser : IYayOutputParser
                 continue;
             }
 
+            var name = match.Groups["name"].Value;
             packages.Add(new PackageSummary(
-                match.Groups["name"].Value,
+                name,
                 match.Groups["version"].Value,
                 string.Empty,
-                PackageSource.Official,
+                ClassifySource(name, foreignPackageNames),
                 0,
                 PackageState.Installed));
         }
 
         return packages;
     }
+
+    /// <summary>Single source-classification rule shared by ParseInstalled/ParseUpdates: a name present in the foreign-package set (from `pacman -Qm`) is AUR; everything else is Official.</summary>
+    private static PackageSource ClassifySource(string packageName, IReadOnlySet<string>? foreignPackageNames) =>
+        foreignPackageNames is not null && foreignPackageNames.Contains(packageName)
+            ? PackageSource.Aur
+            : PackageSource.Official;
 
     private static Dictionary<string, string> ParseFields(string output)
     {
@@ -156,22 +168,4 @@ public sealed class YayOutputParser : IYayOutputParser
     private static bool IsAurRepository(string repository) =>
         repository.Equals("aur", StringComparison.OrdinalIgnoreCase) ||
         repository.Contains("aur", StringComparison.OrdinalIgnoreCase);
-
-    private static long ParseSize(string value)
-    {
-        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 2 || !double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out var number))
-        {
-            return 0;
-        }
-
-        var multiplier = parts[1].ToUpperInvariant() switch
-        {
-            "KIB" => 1024d,
-            "MIB" => 1024d * 1024d,
-            "GIB" => 1024d * 1024d * 1024d,
-            _ => 1d,
-        };
-        return (long)(number * multiplier);
-    }
 }

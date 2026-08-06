@@ -74,6 +74,12 @@
             <ContentControl Content="{Binding AuthPrompt}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
 
+        <!-- Shown once at startup on Arch/CachyOS when yay wasn't found on PATH. -->
+        <Border IsVisible="{Binding BackendInstallPrompt, Converter={x:Static ObjectConverters.IsNotNull}}"
+                Background="{DynamicResource Brush.ScrimBackdrop}">
+            <ContentControl Content="{Binding BackendInstallPrompt}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
     </Panel>
 
 </Window>

@@ -10,6 +10,8 @@ using yay_see_sharp.infrastructure.Demo;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
 
+namespace yay_see_sharp.application.Tests;
+
 public class PackageDetailsViewModelTests
 {
     [Test]
@@ -17,7 +19,7 @@ public class PackageDetailsViewModelTests
     {
         var backend = new DemoPackageBackend();
         var summary = new PackageSummary("firefox", "1.0", "browser", PackageSource.Official, 0, PackageState.NotInstalled);
-        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"));
+        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
 
         await viewModel.LoadAsync();
 
@@ -30,7 +32,7 @@ public class PackageDetailsViewModelTests
     {
         var backend = new DemoPackageBackend();
         var summary = new PackageSummary("hello", "2.12.1-1", "Greeting utility", PackageSource.Official, 0, PackageState.NotInstalled);
-        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"));
+        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
 
         await viewModel.InstallCommand.Execute();
 
@@ -42,7 +44,7 @@ public class PackageDetailsViewModelTests
     {
         var backend = new DemoPackageBackend();
         var summary = new PackageSummary("hello", "2.12.1-1", "Greeting utility", PackageSource.Official, 0, PackageState.NotInstalled);
-        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"));
+        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
 
         var stagesSeen = new List<PackageOperationStage>();
         viewModel.PropertyChanged += (_, args) =>
@@ -64,7 +66,7 @@ public class PackageDetailsViewModelTests
     {
         var backend = new DemoPackageBackend();
         var summary = new PackageSummary("hello", "2.12.1-1", "Greeting utility", PackageSource.Official, 0, PackageState.NotInstalled);
-        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"));
+        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
         await viewModel.InstallCommand.Execute();
 
         await viewModel.UninstallCommand.Execute();
@@ -79,7 +81,7 @@ public class PackageDetailsViewModelTests
         var localization = new LocalizationService("en");
         var backend = new DemoPackageBackend();
         var summary = new PackageSummary("firefox", "1.0", "browser", PackageSource.Official, 0, PackageState.NotInstalled);
-        var viewModel = new PackageDetailsViewModel(backend, summary, localization);
+        var viewModel = new PackageDetailsViewModel(backend, summary, localization, Mock.Of<IPkgbuildService>());
 
         await Assert.That(viewModel.InstallLabel).IsEqualTo("Install");
         await Assert.That(viewModel.UninstallLabel).IsEqualTo("Uninstall");
@@ -95,7 +97,7 @@ public class PackageDetailsViewModelTests
     {
         var backend = new DemoPackageBackend();
         var summary = new PackageSummary("hello", "2.12.1-1", "Greeting utility", PackageSource.Official, 0, PackageState.NotInstalled);
-        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"));
+        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
         await viewModel.LoadAsync();
 
         await Assert.That(((ICommand)viewModel.UninstallCommand).CanExecute(null)).IsFalse();
@@ -108,7 +110,7 @@ public class PackageDetailsViewModelTests
     {
         var backend = new DemoPackageBackend();
         var summary = new PackageSummary("hello", "2.12.1-1", "Greeting utility", PackageSource.Official, 0, PackageState.NotInstalled);
-        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"));
+        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
 
         await viewModel.InstallCommand.Execute();
 
@@ -122,7 +124,7 @@ public class PackageDetailsViewModelTests
     {
         var backend = new DemoPackageBackend();
         var summary = new PackageSummary("hello", "2.12.1-1", "Greeting utility", PackageSource.Official, 0, PackageState.NotInstalled);
-        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"));
+        var viewModel = new PackageDetailsViewModel(backend, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
         await viewModel.LoadAsync();
 
         await Assert.That(await viewModel.UninstallCommand.CanExecute.FirstAsync()).IsFalse();
@@ -144,7 +146,7 @@ public class PackageDetailsViewModelTests
             });
 
         var viewModel = new PackageDetailsViewModel(
-            backend.Object, summary, new LocalizationService("en"), uninstallPolicy: new FakeUninstallPolicy(true));
+            backend.Object, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>(), uninstallPolicy: new FakeUninstallPolicy(true));
         await viewModel.LoadAsync();
 
         await viewModel.UninstallCommand.Execute();
@@ -168,7 +170,7 @@ public class PackageDetailsViewModelTests
             });
 
         var viewModel = new PackageDetailsViewModel(
-            backend.Object, summary, new LocalizationService("en"), uninstallPolicy: new FakeUninstallPolicy(false));
+            backend.Object, summary, new LocalizationService("en"), Mock.Of<IPkgbuildService>(), uninstallPolicy: new FakeUninstallPolicy(false));
         await viewModel.LoadAsync();
 
         await viewModel.UninstallCommand.Execute();

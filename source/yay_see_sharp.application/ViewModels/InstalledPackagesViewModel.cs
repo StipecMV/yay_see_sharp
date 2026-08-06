@@ -10,6 +10,7 @@ namespace yay_see_sharp.application.ViewModels;
 public class InstalledPackagesViewModel : LocalizedViewModelBase
 {
     private readonly IPackageBackend _backend;
+    private readonly IPkgbuildService _pkgbuildService;
     private readonly IUninstallPolicy? _uninstallPolicy;
     private readonly INotificationService? _notificationService;
     private PackageSummary? _selectedPackage;
@@ -21,11 +22,13 @@ public class InstalledPackagesViewModel : LocalizedViewModelBase
     public InstalledPackagesViewModel(
         IPackageBackend backend,
         ILocalizationService localization,
+        IPkgbuildService pkgbuildService,
         IUninstallPolicy? uninstallPolicy = null,
         INotificationService? notificationService = null)
         : base(localization)
     {
         _backend = backend;
+        _pkgbuildService = pkgbuildService;
         _uninstallPolicy = uninstallPolicy;
         _notificationService = notificationService;
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
@@ -121,7 +124,7 @@ public class InstalledPackagesViewModel : LocalizedViewModelBase
         }
 
         var details = new PackageDetailsViewModel(
-            _backend, package, Localization, uninstallPolicy: _uninstallPolicy, notificationService: _notificationService);
+            _backend, package, Localization, _pkgbuildService, uninstallPolicy: _uninstallPolicy, notificationService: _notificationService);
         SelectedDetails = details;
         details.LoadAsync().FireAndForget();
     }

@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Settings;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class FileSettingsStoreTests
 {
     [Test]

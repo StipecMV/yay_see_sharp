@@ -5,6 +5,8 @@ using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
 
+namespace yay_see_sharp.application.Tests;
+
 public class BuildJobViewModelTests
 {
     [Test]

@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# A second push to the same branch/PR supersedes any run still in flight for it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build, test, and scan
+    # Self-hosted CachyOS runner: yay is on PATH, .NET 10 SDK is installed, and it's the only
+    # environment where the gated real-Arch install/uninstall integration tests can safely run.
+    # See docs/setup-self-hosted-runner.md for how this runner is provisioned.
+    runs-on: [self-hosted, cachyos]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore
+        run: dotnet restore yay_see_sharp.slnx
+
+      - name: Build (Debug)
+        run: dotnet build yay_see_sharp.slnx --configuration Debug --no-restore
+
+      - name: Build (Release)
+        run: dotnet build yay_see_sharp.slnx --configuration Release --no-restore
+
+      - name: Test — domain
+        run: dotnet run --project tests/yay_see_sharp.domain.Tests --configuration Debug --no-build
+
+      - name: Test — infrastructure
+        run: dotnet run --project tests/yay_see_sharp.infrastructure.Tests --configuration Debug --no-build
+
+      - name: Test — application
+        run: dotnet run --project tests/yay_see_sharp.application.Tests --configuration Debug --no-build
+
+      - name: Test — e2e (Avalonia Headless)
+        run: dotnet run --project tests/yay_see_sharp.e2e.Tests --configuration Debug --no-build
+
+      - name: Test — integration (real network/filesystem/yay, this runner is Arch)
+        env:
+          # Safe here specifically because this runner is a real Arch/CachyOS host with yay
+          # installed — the 3 destructive install/uninstall tests this unlocks must never run
+          # anywhere else. Do not copy this env var into a workflow that might run on a
+          # non-self-hosted or non-Arch runner.
+          YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS: "1"
+        run: dotnet run --project tests/yay_see_sharp.integration.Tests --configuration Debug --no-build
+
+      - name: Dependency vulnerability scan
+        run: dotnet list yay_see_sharp.slnx package --vulnerable --include-transitive
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: output/bin/TestResults/**
+          retention-days: 14

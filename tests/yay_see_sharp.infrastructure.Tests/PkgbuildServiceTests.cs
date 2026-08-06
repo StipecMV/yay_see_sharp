@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Http;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class PkgbuildServiceTests
 {
     private sealed class RecordingHandler : HttpMessageHandler

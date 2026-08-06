@@ -1,10 +1,14 @@
+using Moq;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
+using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Demo;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.application.ViewModels;
+
+namespace yay_see_sharp.application.Tests;
 
 public class SearchViewModelTests
 {
@@ -12,7 +16,7 @@ public class SearchViewModelTests
     public async Task Search_populates_results_from_backend()
     {
         var backend = new DemoPackageBackend();
-        var viewModel = new SearchViewModel(backend, new LocalizationService("en")) { Query = "fire" };
+        var viewModel = new SearchViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>()) { Query = "fire" };
 
         await viewModel.SearchCommand.Execute();
 
@@ -25,7 +29,7 @@ public class SearchViewModelTests
     public async Task Search_with_source_filter_only_returns_matching_source()
     {
         var backend = new DemoPackageBackend();
-        var viewModel = new SearchViewModel(backend, new LocalizationService("en")) { Query = "" };
+        var viewModel = new SearchViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>()) { Query = "" };
         viewModel.SelectedSourceOption = viewModel.SourceOptions.Single(option => option.Value == PackageSource.Aur);
 
         await viewModel.SearchCommand.Execute();
@@ -41,7 +45,7 @@ public class SearchViewModelTests
     public async Task Selecting_a_package_creates_details_for_it()
     {
         var backend = new DemoPackageBackend();
-        var viewModel = new SearchViewModel(backend, new LocalizationService("en")) { Query = "fire" };
+        var viewModel = new SearchViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>()) { Query = "fire" };
         await viewModel.SearchCommand.Execute();
 
         viewModel.SelectedPackage = viewModel.Results[0];
@@ -55,7 +59,7 @@ public class SearchViewModelTests
     {
         var localization = new LocalizationService("en");
         var backend = new DemoPackageBackend();
-        var viewModel = new SearchViewModel(backend, localization);
+        var viewModel = new SearchViewModel(backend, localization, Mock.Of<IPkgbuildService>());
 
         await Assert.That(viewModel.SourceOptions.Count).IsEqualTo(3);
         await Assert.That(viewModel.SourceOptions[0].Value).IsNull();
@@ -72,7 +76,7 @@ public class SearchViewModelTests
     public async Task Default_source_selection_is_all_not_empty()
     {
         var backend = new DemoPackageBackend();
-        var viewModel = new SearchViewModel(backend, new LocalizationService("en"));
+        var viewModel = new SearchViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
 
         await Assert.That(viewModel.SelectedSourceOption.Label).IsEqualTo("All");
         await Assert.That(viewModel.SelectedSourceOption.Value).IsNull();
@@ -84,7 +88,7 @@ public class SearchViewModelTests
     {
         var localization = new LocalizationService("en");
         var backend = new DemoPackageBackend();
-        var viewModel = new SearchViewModel(backend, localization);
+        var viewModel = new SearchViewModel(backend, localization, Mock.Of<IPkgbuildService>());
         viewModel.SelectedSourceOption = viewModel.SourceOptions.Single(option => option.Value == PackageSource.Aur);
 
         localization.SetLanguage("sk");
@@ -99,7 +103,7 @@ public class SearchViewModelTests
     {
         var localization = new LocalizationService("en");
         var backend = new DemoPackageBackend();
-        var viewModel = new SearchViewModel(backend, localization) { Query = "firefox" };
+        var viewModel = new SearchViewModel(backend, localization, Mock.Of<IPkgbuildService>()) { Query = "firefox" };
 
         localization.SetLanguage("sk");
 
@@ -111,7 +115,7 @@ public class SearchViewModelTests
     {
         var localization = new LocalizationService("en");
         var backend = new DemoPackageBackend();
-        var viewModel = new SearchViewModel(backend, localization) { Query = "fire" };
+        var viewModel = new SearchViewModel(backend, localization, Mock.Of<IPkgbuildService>()) { Query = "fire" };
         await viewModel.SearchCommand.Execute();
         var resultCountBefore = viewModel.Results.Count;
 

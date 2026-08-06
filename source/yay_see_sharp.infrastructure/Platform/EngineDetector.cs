@@ -33,5 +33,30 @@ public sealed class EngineDetector : IEngineDetector
     }
 
     private bool IsOnPath(string executableName) => _searchPaths
-        .Any(directory => File.Exists(Path.Combine(directory, executableName)));
+        .Select(directory => Path.Combine(directory, executableName))
+        .Any(IsExecutableFile);
+
+    /// <summary>A file merely existing on PATH isn't enough — a non-executable `yay` (e.g. downloaded but never chmod +x'd) must not be reported as usable, or the factory would select Real mode and then fail the moment it actually tries to run it.</summary>
+    private static bool IsExecutableFile(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        if (!OperatingSystem.IsLinux())
+        {
+            return true;
+        }
+
+        try
+        {
+            var mode = File.GetUnixFileMode(path);
+            return (mode & (UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute)) != 0;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+    }
 }

@@ -4,6 +4,8 @@ using Moq;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.infrastructure.Notifications;
 
+namespace yay_see_sharp.infrastructure.Tests;
+
 public class SettingsAwareNotificationServiceTests
 {
     private sealed class FakeSettings(bool notificationsEnabled) : INotificationSettings
