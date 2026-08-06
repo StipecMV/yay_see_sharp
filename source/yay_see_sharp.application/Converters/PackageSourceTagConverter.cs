@@ -13,6 +13,7 @@ public sealed class PackageSourceTagConverter : IValueConverter
     {
         PackageSource.Aur => "AUR",
         PackageSource.Official => "Official",
+        PackageSource.Foreign => "Foreign",
         _ => string.Empty,
     };
 

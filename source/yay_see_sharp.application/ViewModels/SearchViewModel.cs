@@ -10,6 +10,13 @@ namespace yay_see_sharp.application.ViewModels;
 
 public class SearchViewModel : LocalizedViewModelBase
 {
+    /// <summary>UI-08: shown as search results whenever the query is empty, so the screen is never just a blank box — Demo mode only shows the ones present in its own catalog; Real mode searches for all of them via the real backend.</summary>
+    private static readonly string[] RecommendedPackageNames =
+    [
+        "firefox", "vlc", "git", "neovim", "code", "gimp", "inkscape", "libreoffice-fresh",
+        "steam", "discord", "obs-studio", "htop", "btop", "fzf", "ripgrep", "bat",
+    ];
+
     private readonly IPackageBackend _backend;
     private readonly IPkgbuildService _pkgbuildService;
     private readonly IUninstallPolicy? _uninstallPolicy;
@@ -38,12 +45,35 @@ public class SearchViewModel : LocalizedViewModelBase
         _selectedSourceOption = _sourceOptions[0];
         SearchCommand = ReactiveCommand.CreateFromTask(SearchAsync);
         InstallCommand = ReactiveCommand.CreateFromTask<PackageSummary>(InstallFromRowAsync);
+        SelectPackageCommand = ReactiveCommand.Create<PackageSummary>(package => SelectedPackage = package);
         this.WhenAnyValue(x => x.SelectedPackage).Subscribe(OnSelectedPackageChanged);
+
+        // UI-07: live search — the query (and filter, so changing either re-runs the same search)
+        // drives the results automatically, debounced so fast typing doesn't fire a search per
+        // keystroke. Skip(1) deliberately excludes the constructor's own initial (Query="",
+        // SourceFilter=default) emission: every SearchViewModel in the app graph is constructed
+        // eagerly at startup whether or not the user ever visits Search, so without this every
+        // other screen's tests would also schedule a debounced background search. The Search
+        // screen's own initial empty-state content is loaded once, directly, right below instead.
+        this.WhenAnyValue(x => x.Query, x => x.SourceFilter)
+            .Skip(1)
+            .Throttle(TimeSpan.FromMilliseconds(300), RxApp.MainThreadScheduler)
+            .DistinctUntilChanged()
+            .Select(_ => Observable.FromAsync(RunLiveSearchAsync))
+            .Switch()
+            .Subscribe();
+
+        // UI-08: an empty query shows curated recommended packages instead of a blank screen —
+        // loaded once immediately, matching the same fire-and-forget initial-load pattern
+        // DashboardViewModel/InstalledPackagesViewModel already use in their own constructors.
+        LoadRecommendedAsync().FireAndForget();
     }
 
     public ReactiveCommand<Unit, Unit> SearchCommand { get; }
 
     public ReactiveCommand<PackageSummary, Unit> InstallCommand { get; }
+
+    public ReactiveCommand<PackageSummary, Unit> SelectPackageCommand { get; }
 
     public ObservableCollection<PackageSummary> Results { get; } = [];
 
@@ -123,6 +153,9 @@ public class SearchViewModel : LocalizedViewModelBase
         new(PackageSource.Aur, Localization.GetString("Search.SourceAur")),
     ];
 
+    private Task RunLiveSearchAsync() =>
+        string.IsNullOrWhiteSpace(Query) ? LoadRecommendedAsync() : SearchAsync();
+
     private async Task SearchAsync()
     {
         IsBusy = true;
@@ -132,6 +165,44 @@ public class SearchViewModel : LocalizedViewModelBase
             var results = await _backend.SearchAsync(Query, SourceFilter);
             Results.Clear();
             foreach (var package in results)
+            {
+                Results.Add(package);
+            }
+
+            this.RaisePropertyChanged(nameof(HasNoResults));
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    private async Task LoadRecommendedAsync()
+    {
+        IsBusy = true;
+        ErrorMessage = null;
+        try
+        {
+            var resultSets = await Task.WhenAll(
+                RecommendedPackageNames.Select(name => _backend.SearchAsync(name, SourceFilter)));
+
+            // Match each result set back to its recommended name (rather than just taking the
+            // first entry, which is whatever the backend ranks first for that query and may not
+            // be an exact-name match at all) so a fuzzy/AUR-heavy search result doesn't replace
+            // the actual curated package.
+            var curated = RecommendedPackageNames
+                .Zip(resultSets, (name, set) => set.FirstOrDefault(
+                    package => package.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+                .Where(package => package is not null)
+                .Select(package => package!)
+                .ToArray();
+
+            Results.Clear();
+            foreach (var package in curated)
             {
                 Results.Add(package);
             }

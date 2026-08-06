@@ -16,16 +16,22 @@
                     <icons:LockIcon Width="17" Height="17" Stroke="{DynamicResource Brush.Accent}"
                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
-                <TextBlock Text="{Binding TitleLabel}" FontSize="16" FontWeight="Medium"
+                <TextBlock Text="{Binding TitleLabel}" FontSize="32" FontWeight="Medium"
                            Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
             </StackPanel>
 
-            <TextBlock Text="{Binding BodyLabel}" FontSize="12.5" LineHeight="19"
+            <TextBlock Text="{Binding BodyLabel}" FontSize="25" LineHeight="19"
                        Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
 
             <StackPanel>
-                <TextBlock Text="{Binding PasswordLabel}" FontSize="11.5" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,5"/>
-                <TextBox Text="{Binding Password}" PasswordChar="•"/>
+                <TextBlock Text="{Binding PasswordLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,5"/>
+                <!-- Enter confirms, same as clicking Authenticate — respects the command's own
+                     CanExecute (empty password), so it's a no-op rather than a silent submit. -->
+                <TextBox Text="{Binding Password}" PasswordChar="•">
+                    <TextBox.KeyBindings>
+                        <KeyBinding Gesture="Enter" Command="{Binding AuthenticateCommand}"/>
+                    </TextBox.KeyBindings>
+                </TextBox>
             </StackPanel>
 
             <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">

@@ -47,6 +47,11 @@ namespace yay_see_sharp.application
                 var window = new MainWindow { DataContext = viewModel };
                 desktop.MainWindow = window;
 
+                // UI-21: the tray icon is registered at startup, not only after the first
+                // minimize/close — so it's there to restore from even if the user never triggers
+                // a hide-to-tray in that session.
+                _trayService.Show();
+
                 // Fires on the single-instance service's socket-listener thread, never the UI
                 // thread — every touch of `window` below must go through the dispatcher.
                 _singleInstanceService.ActivationRequested += (_, _) => Dispatcher.UIThread.Post(() =>
@@ -81,9 +86,18 @@ namespace yay_see_sharp.application
                     {
                         args.Cancel = true;
                         window.Hide();
-                        _trayService.Show();
                     }
                 };
+
+                // UI-02: minimizing behaves the same as closing (X) when hide-to-tray is enabled —
+                // the window disappears into the tray instead of sitting minimized in the taskbar.
+                window.GetObservable(Window.WindowStateProperty).Subscribe(state =>
+                {
+                    if (state == WindowState.Minimized && viewModel.Settings.CloseAction == CloseAction.HideToTray)
+                    {
+                        window.Hide();
+                    }
+                });
             }
 
             base.OnFrameworkInitializationCompleted();

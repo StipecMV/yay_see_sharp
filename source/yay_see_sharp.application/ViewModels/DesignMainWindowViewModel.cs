@@ -1,7 +1,6 @@
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Demo;
-using yay_see_sharp.infrastructure.Filesystem;
 using yay_see_sharp.infrastructure.Http;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.infrastructure.Platform;
@@ -34,5 +33,5 @@ public sealed class DesignMainWindowViewModel : MainWindowViewModel
     }
 
     private static SettingsViewModel CreateSettings(ILocalizationService localization) =>
-        new(new FileSettingsStore(), localization, AppSettings.Default, new EngineDetector(), new FolderBrowserService());
+        new(new FileSettingsStore(), localization, AppSettings.Default, new EngineDetector());
 }

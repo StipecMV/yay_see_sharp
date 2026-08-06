@@ -3,7 +3,6 @@ using System.Reactive;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
-using yay_see_sharp.infrastructure.Platform;
 
 namespace yay_see_sharp.application.ViewModels;
 
@@ -11,7 +10,8 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
 {
     private readonly ISettingsStore _settingsStore;
     private readonly IEngineDetector _engineDetector;
-    private readonly IFolderBrowserService _folderBrowserService;
+    private readonly INotificationService _notificationService;
+    private BackendMode _backendMode = BackendMode.Demo;
 
     private Task? _pendingSave;
     private bool _dirtyWhileSaving;
@@ -27,19 +27,18 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
     private bool _autoUpdateCheckEnabled;
     private bool _isSaved;
     private IReadOnlyList<SelectableOption<string>> _languageOptions = [];
-    private FolderBrowserViewModel? _folderBrowser;
 
     public SettingsViewModel(
         ISettingsStore settingsStore,
         ILocalizationService localizationService,
         AppSettings initial,
         IEngineDetector engineDetector,
-        IFolderBrowserService folderBrowserService)
+        INotificationService? notificationService = null)
         : base(localizationService)
     {
         _settingsStore = settingsStore;
         _engineDetector = engineDetector;
-        _folderBrowserService = folderBrowserService;
+        _notificationService = notificationService ?? NullNotificationService.Instance;
         _language = initial.Language;
         _theme = initial.Theme;
         _closeAction = initial.CloseAction;
@@ -57,7 +56,6 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         EngineOptions = BuildEngineOptions();
 
         DetectEngineCommand = ReactiveCommand.Create(DetectEngine);
-        BrowseCommand = ReactiveCommand.CreateFromTask(BrowseForBuildDirectoryAsync);
     }
 
     public IReadOnlyList<SelectableOption<string>> LanguageOptions
@@ -73,8 +71,6 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
     public IReadOnlyList<SelectableOption<PackageManagerEngine>> EngineOptions { get; private set; } = [];
 
     public ReactiveCommand<Unit, Unit> DetectEngineCommand { get; }
-
-    public ReactiveCommand<Unit, Unit> BrowseCommand { get; }
 
     public string AppearanceLabel => Localization.GetString("Settings.Appearance");
 
@@ -96,7 +92,9 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
 
     public string AutoUpdateLabel => Localization.GetString("Settings.AutoUpdate");
 
-    public string AutoUpdateHintLabel => Localization.GetString("Settings.AutoUpdate.Hint");
+    /// <summary>UI-19: describes the actually-configured schedule (a daily check at UpdateScheduleTime), not a hardcoded interval that may not match reality.</summary>
+    public string AutoUpdateHintLabel => string.Format(
+        Localization.GetString("Settings.AutoUpdate.HintDaily"), UpdateScheduleTime.ToString("HH:mm"));
 
     public string MinimizeToTrayLabel => Localization.GetString("Settings.MinimizeToTray");
 
@@ -105,12 +103,6 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
     public string EngineHintLabel => Localization.GetString("Settings.Engine.Hint");
 
     public string DetectLabel => Localization.GetString("Settings.Detect");
-
-    public string AurHelperLabel => Localization.GetString("Settings.AurHelper");
-
-    public string BuildDirectoryLabel => Localization.GetString("Settings.BuildDirectory");
-
-    public string BrowseLabel => Localization.GetString("Settings.Browse");
 
     public string SavedLabel => Localization.GetString("Settings.Saved");
 
@@ -173,6 +165,7 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         {
             this.RaiseAndSetIfChanged(ref _updateScheduleTime, value);
             this.RaisePropertyChanged(nameof(UpdateScheduleTimeOfDay));
+            this.RaisePropertyChanged(nameof(AutoUpdateHintLabel));
             TriggerAutoSave();
         }
     }
@@ -219,12 +212,6 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         set => CloseAction = value ? CloseAction.HideToTray : CloseAction.Exit;
     }
 
-    public FolderBrowserViewModel? FolderBrowser
-    {
-        get => _folderBrowser;
-        private set => this.RaiseAndSetIfChanged(ref _folderBrowser, value);
-    }
-
     public bool IsSaved
     {
         get => _isSaved;
@@ -259,9 +246,6 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         this.RaisePropertyChanged(nameof(EngineLabel));
         this.RaisePropertyChanged(nameof(EngineHintLabel));
         this.RaisePropertyChanged(nameof(DetectLabel));
-        this.RaisePropertyChanged(nameof(AurHelperLabel));
-        this.RaisePropertyChanged(nameof(BuildDirectoryLabel));
-        this.RaisePropertyChanged(nameof(BrowseLabel));
         this.RaisePropertyChanged(nameof(SavedLabel));
 
         // Update labels in-place — do NOT replace the list instances.
@@ -299,6 +283,19 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
 
     private void DetectEngine()
     {
+        // UI-17: in Demo/Simulated mode the running backend is fixed for this session regardless
+        // of what's on PATH — telling the user a real detection ran (and found nothing, or found
+        // something irrelevant) would be misleading, so it's short-circuited to an explanatory
+        // toast instead of actually invoking IEngineDetector.
+        if (_backendMode != BackendMode.Real)
+        {
+            _notificationService.SendAsync(
+                Localization.GetString("Settings.SimulatedModeTitle"),
+                Localization.GetString("Settings.SimulatedModeDetect"),
+                NotificationLevel.Info).FireAndForget();
+            return;
+        }
+
         // Detection can still report Paru if that's what's on PATH, but there's nothing to
         // switch to yet, so only a Yay result is applied.
         if (_engineDetector.Detect() is PackageManagerEngine.Yay)
@@ -307,18 +304,20 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         }
     }
 
-    private async Task BrowseForBuildDirectoryAsync()
+    /// <summary>UI-18: called from the Engine picker's Yay option when clicked in Demo/Simulated mode (there's nothing to actually switch to — the running backend is fixed for this session).</summary>
+    public void NotifyIfSimulated()
     {
-        var browser = new FolderBrowserViewModel(BuildDirectory, Localization, _folderBrowserService);
-        FolderBrowser = browser;
-        var result = await browser.WaitForResultAsync();
-        FolderBrowser = null;
-
-        if (result is not null)
+        if (_backendMode != BackendMode.Real)
         {
-            BuildDirectory = result;
+            _notificationService.SendAsync(
+                Localization.GetString("Settings.SimulatedModeTitle"),
+                Localization.GetString("Settings.SimulatedModeYay"),
+                NotificationLevel.Info).FireAndForget();
         }
     }
+
+    /// <summary>Set once by AppBootstrapper after the real backend is resolved — SettingsViewModel itself is constructed earlier, before the backend exists, so this can't be a constructor parameter.</summary>
+    public void SetBackendMode(BackendMode mode) => _backendMode = mode;
 
     private static string CapitalizeFirst(string value) =>
         value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
@@ -353,5 +352,10 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         while (_dirtyWhileSaving);
 
         IsSaved = true;
+
+        // UI-15: "Saved" is a transient toast, not a permanently-visible label — SettingsView no
+        // longer renders SavedLabel itself; IsSaved/SavedLabel stay for anything else that wants
+        // to know a save just completed (e.g. tests).
+        await _notificationService.SendAsync(SavedLabel, string.Empty, NotificationLevel.Success);
     }
 }

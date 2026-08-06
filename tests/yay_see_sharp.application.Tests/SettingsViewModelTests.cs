@@ -22,7 +22,7 @@ public class SettingsViewModelTests
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
         var store = new FileSettingsStore(path);
         var localization = new LocalizationService("en");
-        var viewModel = new SettingsViewModel(store, localization, AppSettings.Default, Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+        var viewModel = new SettingsViewModel(store, localization, AppSettings.Default, Mock.Of<IEngineDetector>());
 
         try
         {
@@ -52,7 +52,7 @@ public class SettingsViewModelTests
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
         var store = new FileSettingsStore(path);
-        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, Mock.Of<IEngineDetector>());
 
         try
         {
@@ -74,7 +74,7 @@ public class SettingsViewModelTests
     public async Task Update_schedule_time_of_day_proxy_stays_in_sync_with_time_only()
     {
         var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
-        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, Mock.Of<IEngineDetector>());
 
         viewModel.UpdateScheduleTimeOfDay = new TimeSpan(9, 15, 0);
 
@@ -87,7 +87,7 @@ public class SettingsViewModelTests
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
         var store = new FileSettingsStore(path);
         var localization = new LocalizationService("en");
-        var viewModel = new SettingsViewModel(store, localization, AppSettings.Default, Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+        var viewModel = new SettingsViewModel(store, localization, AppSettings.Default, Mock.Of<IEngineDetector>());
 
         try
         {
@@ -110,7 +110,7 @@ public class SettingsViewModelTests
     {
         var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
         var localization = new LocalizationService("en");
-        var viewModel = new SettingsViewModel(store, localization, AppSettings.Default, Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+        var viewModel = new SettingsViewModel(store, localization, AppSettings.Default, Mock.Of<IEngineDetector>());
 
         var systemTheme = viewModel.ThemeOptions.Single(option => option.Value == ThemePreference.System);
         await Assert.That(systemTheme.Label).IsEqualTo("System");
@@ -135,7 +135,7 @@ public class SettingsViewModelTests
         // the list references themselves are never replaced.
         var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
         var localization = new LocalizationService("en");
-        var viewModel = new SettingsViewModel(store, localization, AppSettings.Default, Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+        var viewModel = new SettingsViewModel(store, localization, AppSettings.Default, Mock.Of<IEngineDetector>());
 
         // Capture the LIST references (not .ToArray() copies) and individual items BEFORE switch
         var themeListBefore = viewModel.ThemeOptions;
@@ -170,7 +170,7 @@ public class SettingsViewModelTests
     public async Task Engine_options_only_offer_yay_since_paru_has_no_backend_implementation_yet()
     {
         var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
-        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, Mock.Of<IEngineDetector>());
 
         await Assert.That(viewModel.EngineOptions.Count).IsEqualTo(1);
         await Assert.That(viewModel.EngineOptions[0].Value).IsEqualTo(PackageManagerEngine.Yay);
@@ -182,7 +182,7 @@ public class SettingsViewModelTests
         var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
         var persisted = AppSettings.Default with { Engine = PackageManagerEngine.Paru };
 
-        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), persisted, Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), persisted, Mock.Of<IEngineDetector>());
 
         await Assert.That(viewModel.Engine).IsEqualTo(PackageManagerEngine.Yay);
     }

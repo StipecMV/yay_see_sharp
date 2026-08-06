@@ -60,10 +60,15 @@
 ## Update schedule
 
 - Check on startup.
-- Manual `Refresh` action.
-- Automatic check once per day at 10:00 by default.
-- Schedule is configurable in settings.
+- Automatic check once per day at a configurable time (default 10:00); the Settings screen's schedule description reflects the actual configured time, not a hardcoded interval.
+- Screens auto-refresh after any operation that changes their data (install/uninstall/update) instead of requiring a manual Refresh button — see the UI/UX notes below.
 - Notify when updates are available.
+
+## UI/UX notes (superseding earlier assumptions above)
+
+- No manual "Refresh" buttons on Dashboard or Installed — every screen refreshes itself automatically after the operation that would make its data stale (install, uninstall, update). This supersedes the "Manual `Refresh` action" line that appeared in earlier update-schedule requirements.
+- **AUR helper build directory (`BuildDirectory` setting) is a future feature, not exposed in the current UI.** The underlying `SettingsViewModel.BuildDirectory` model field and `IBuildDirectoryPolicy` runtime wiring in `YayPackageBackend` (adds `--builddir` to install/update commands when configured) are kept intact so this can be reintroduced as a pure UI addition later, without a data-model change. Until then, it is always unset and has no effect on Install/Update behavior.
+- Notifications are surfaced as in-app toasts (bottom-right, auto-dismissing after 30s) in addition to the OS-level desktop notification `notify-send` already covered above — the toast overlay is not gated by the desktop-notifications setting, since it's a different, always-on in-app surface.
 
 ## Quality requirements
 

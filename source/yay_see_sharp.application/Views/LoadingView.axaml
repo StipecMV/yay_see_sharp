@@ -12,12 +12,12 @@
     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
         <icons:LogoMark Size="60" HorizontalAlignment="Center"/>
         <StackPanel HorizontalAlignment="Center" Spacing="10">
-            <TextBlock Text="Yay See Sharp" FontSize="15" FontWeight="Medium"
+            <TextBlock Text="Yay See Sharp" FontSize="30" FontWeight="Medium"
                        Foreground="{DynamicResource Brush.Text}" HorizontalAlignment="Center"/>
             <ProgressBar Width="160" Height="3" IsIndeterminate="True"
                          Background="{DynamicResource Brush.Divider}"
                          Foreground="{DynamicResource Brush.Accent}"/>
-            <TextBlock Text="{Binding StatusLabel}" FontSize="12"
+            <TextBlock Text="{Binding StatusLabel}" FontSize="24"
                        Foreground="{DynamicResource Brush.TextMuted}" HorizontalAlignment="Center"/>
         </StackPanel>
     </StackPanel>

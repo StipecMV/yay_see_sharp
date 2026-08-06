@@ -26,8 +26,8 @@ public class PackageBackendTests
             .ReturnsAsync(new CommandResult(exitCode, output, false));
     }
 
-    /// <summary>Wires up a fully healthy set of pacman statistics queries so tests that only care about one field don't also have to stub the other five.</summary>
-    private static void SetupHealthyStatisticsQueries(Mock<ICommandRunner> runner)
+    /// <summary>Wires up a fully healthy set of pacman statistics queries so tests that only care about one field don't also have to stub the other five. Also stubs the mocked parser's AUR-confirmation call (used internally by <c>PacmanQueryService</c>, not just via <see cref="IYayOutputParser"/> setups the test itself makes) so `hello-git` confirms as AUR.</summary>
+    private static void SetupHealthyStatisticsQueries(Mock<ICommandRunner> runner, Mock<IYayOutputParser>? parser = null)
     {
         SetupPacman(runner, ["-Qq"], 0, "hello", "firefox");
         SetupPacman(runner, ["-Qe"], 0, "hello");
@@ -36,6 +36,22 @@ public class PackageBackendTests
         SetupPacman(runner, ["-Qm"], 0, "hello-git 1.0-1");
         SetupPacman(runner, ["-Qu"], 0, "firefox 128.0-1 -> 129.0-1");
         SetupPacman(runner, ["-Qi"], 0, "Name : hello", "Installed Size : 1.00 MiB", "", "Name : firefox", "Installed Size : 2.00 MiB");
+        SetupAurConfirmation(runner, "hello-git");
+        parser?.Setup(item => item.ParseAurConfirmedNames(It.IsAny<string>()))
+            .Returns(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "hello-git" });
+    }
+
+    /// <summary>Stubs the bulk `yay -Si -- &lt;names&gt;` AUR-confirmation query so a foreign (`pacman -Qm`) name is confirmed as AUR rather than merely Foreign.</summary>
+    private static void SetupAurConfirmation(Mock<ICommandRunner> runner, params string[] confirmedNames)
+    {
+        var arguments = new List<string> { "-Si", "--" };
+        arguments.AddRange(confirmedNames);
+        var lines = confirmedNames.SelectMany(name => new[] { $"Repository : aur", $"Name : {name}", string.Empty }).ToArray();
+        runner.Setup(item => item.RunAsync(
+                It.Is<CommandRequest>(request => request.FileName == "yay" && request.Arguments.SequenceEqual(arguments)),
+                It.IsAny<IProgress<CommandOutput>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(0, lines.Select(line => new CommandOutput(CommandOutputKind.StandardOutput, line, DateTimeOffset.UtcNow)).ToArray(), false));
     }
 
     [Test]
@@ -255,7 +271,8 @@ public class PackageBackendTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CommandResult(0, output, false));
         SetupPacman(runner, ["-Qm"], 0, "hello-git 1.0-1");
-        parser.Setup(item => item.ParseUpdates("updates output", It.IsAny<IReadOnlySet<string>>())).Returns(expected);
+        SetupAurConfirmation(runner, "hello-git");
+        parser.Setup(item => item.ParseUpdates("updates output", It.IsAny<IReadOnlySet<string>>(), It.IsAny<IReadOnlySet<string>>())).Returns(expected);
 
         var backend = new YayPackageBackend(runner.Object, parser.Object);
         var updates = await backend.GetUpdatesAsync();
@@ -274,8 +291,48 @@ public class PackageBackendTests
                 It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CommandResult(0, [], false));
         SetupPacman(runner, ["-Qm"], 0);
-        SetupHealthyStatisticsQueries(runner);
-        parser.Setup(item => item.ParseUpdates(It.IsAny<string>(), It.IsAny<IReadOnlySet<string>>())).Returns([]);
+        SetupHealthyStatisticsQueries(runner, parser);
+        parser.Setup(item => item.ParseUpdates(It.IsAny<string>(), It.IsAny<IReadOnlySet<string>>(), It.IsAny<IReadOnlySet<string>>())).Returns([]);
+
+        var backend = new YayPackageBackend(runner.Object, parser.Object);
+        var before = DateTimeOffset.UtcNow;
+        await backend.GetUpdatesAsync();
+        var statistics = await backend.GetStatisticsAsync();
+
+        await Assert.That(statistics.LastUpdateCheck).IsNotNull();
+        await Assert.That(statistics.LastUpdateCheck!.Value).IsGreaterThanOrEqualTo(before);
+    }
+
+    [Test]
+    public async Task Yay_get_updates_treats_exit_code_1_as_no_updates_not_a_failure()
+    {
+        // yay -Qu (like pacman -Qu) exits 1 with empty output when there are simply no updates —
+        // that must read as an empty list, not throw and surface as a dashboard error.
+        var runner = new Mock<ICommandRunner>();
+        var parser = new Mock<IYayOutputParser>();
+        runner.Setup(item => item.RunAsync(
+                It.Is<CommandRequest>(request => request.FileName == "yay" && request.Arguments.SequenceEqual(new[] { "-Qu" })),
+                It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(1, [], false));
+
+        var backend = new YayPackageBackend(runner.Object, parser.Object);
+        var updates = await backend.GetUpdatesAsync();
+
+        await Assert.That(updates.Count).IsEqualTo(0);
+        parser.Verify(item => item.ParseUpdates(
+            It.IsAny<string>(), It.IsAny<IReadOnlySet<string>>(), It.IsAny<IReadOnlySet<string>>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Yay_get_updates_with_exit_code_1_still_records_last_update_check()
+    {
+        var runner = new Mock<ICommandRunner>();
+        var parser = new Mock<IYayOutputParser>();
+        runner.Setup(item => item.RunAsync(
+                It.Is<CommandRequest>(request => request.FileName == "yay" && request.Arguments.SequenceEqual(new[] { "-Qu" })),
+                It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(1, [], false));
+        SetupHealthyStatisticsQueries(runner, parser);
 
         var backend = new YayPackageBackend(runner.Object, parser.Object);
         var before = DateTimeOffset.UtcNow;
@@ -307,7 +364,7 @@ public class PackageBackendTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CommandResult(0, output, false));
         SetupPacman(runner, ["-Qm"], 0);
-        parser.Setup(item => item.ParseInstalled("installed output", It.IsAny<IReadOnlySet<string>>())).Returns(expected);
+        parser.Setup(item => item.ParseInstalled("installed output", It.IsAny<IReadOnlySet<string>>(), It.IsAny<IReadOnlySet<string>>())).Returns(expected);
 
         var backend = new YayPackageBackend(runner.Object, parser.Object);
         var installed = await backend.GetInstalledPackagesAsync();
@@ -332,7 +389,7 @@ public class PackageBackendTests
     }
 
     [Test]
-    public async Task Parser_classifies_a_foreign_installed_package_as_aur_and_others_as_official()
+    public async Task Parser_classifies_an_unconfirmed_foreign_installed_package_as_foreign_and_others_as_official()
     {
         var parser = new YayOutputParser();
         const string output = "hello 2.12.1-1\nhello-git 2.12.1.r4-1\n";
@@ -341,11 +398,25 @@ public class PackageBackendTests
         var results = parser.ParseInstalled(output, foreign);
 
         await Assert.That(results.Single(p => p.Name == "hello").Source).IsEqualTo(PackageSource.Official);
+        await Assert.That(results.Single(p => p.Name == "hello-git").Source).IsEqualTo(PackageSource.Foreign);
+    }
+
+    [Test]
+    public async Task Parser_classifies_a_confirmed_aur_installed_package_as_aur()
+    {
+        var parser = new YayOutputParser();
+        const string output = "hello 2.12.1-1\nhello-git 2.12.1.r4-1\n";
+        var foreign = new HashSet<string> { "hello-git" };
+        var confirmedAur = new HashSet<string> { "hello-git" };
+
+        var results = parser.ParseInstalled(output, foreign, confirmedAur);
+
+        await Assert.That(results.Single(p => p.Name == "hello").Source).IsEqualTo(PackageSource.Official);
         await Assert.That(results.Single(p => p.Name == "hello-git").Source).IsEqualTo(PackageSource.Aur);
     }
 
     [Test]
-    public async Task Parser_classifies_a_foreign_update_as_aur_and_others_as_official()
+    public async Task Parser_classifies_an_unconfirmed_foreign_update_as_foreign_and_others_as_official()
     {
         var parser = new YayOutputParser();
         const string output = "hello 2.12.1-1 -> 2.12.2-1\nhello-git 2.12.1.r3-1 -> 2.12.1.r4-1\n";
@@ -354,7 +425,34 @@ public class PackageBackendTests
         var results = parser.ParseUpdates(output, foreign);
 
         await Assert.That(results.Single(p => p.Name == "hello").Source).IsEqualTo(PackageSource.Official);
+        await Assert.That(results.Single(p => p.Name == "hello-git").Source).IsEqualTo(PackageSource.Foreign);
+    }
+
+    [Test]
+    public async Task Parser_classifies_a_confirmed_aur_update_as_aur()
+    {
+        var parser = new YayOutputParser();
+        const string output = "hello 2.12.1-1 -> 2.12.2-1\nhello-git 2.12.1.r3-1 -> 2.12.1.r4-1\n";
+        var foreign = new HashSet<string> { "hello-git" };
+        var confirmedAur = new HashSet<string> { "hello-git" };
+
+        var results = parser.ParseUpdates(output, foreign, confirmedAur);
+
         await Assert.That(results.Single(p => p.Name == "hello-git").Source).IsEqualTo(PackageSource.Aur);
+    }
+
+    [Test]
+    public async Task Parser_parses_aur_confirmed_names_from_a_bulk_yay_si_response()
+    {
+        var parser = new YayOutputParser();
+        const string output =
+            "Repository : aur\nName : hello-git\nVersion : 2.12.1.r4-1\n\n" +
+            "Repository : core\nName : hello\nVersion : 2.12.1-1\n";
+
+        var confirmed = parser.ParseAurConfirmedNames(output);
+
+        await Assert.That(confirmed.Contains("hello-git")).IsTrue();
+        await Assert.That(confirmed.Contains("hello")).IsFalse();
     }
 
     [Test]
@@ -386,7 +484,7 @@ public class PackageBackendTests
     {
         var runner = new Mock<ICommandRunner>();
         var parser = new Mock<IYayOutputParser>();
-        SetupHealthyStatisticsQueries(runner);
+        SetupHealthyStatisticsQueries(runner, parser);
 
         var backend = new YayPackageBackend(runner.Object, parser.Object);
         var statistics = await backend.GetStatisticsAsync();
@@ -399,7 +497,7 @@ public class PackageBackendTests
     {
         var runner = new Mock<ICommandRunner>();
         var parser = new Mock<IYayOutputParser>();
-        SetupHealthyStatisticsQueries(runner);
+        SetupHealthyStatisticsQueries(runner, parser);
 
         var backend = new YayPackageBackend(runner.Object, parser.Object);
         var statistics = await backend.GetStatisticsAsync();
@@ -419,7 +517,7 @@ public class PackageBackendTests
         // are simply zero matches — that must read as a real 0, not "unknown".
         var runner = new Mock<ICommandRunner>();
         var parser = new Mock<IYayOutputParser>();
-        SetupHealthyStatisticsQueries(runner);
+        SetupHealthyStatisticsQueries(runner, parser);
         SetupPacman(runner, ["-Qdt"], 1); // no output at all -> zero orphans
 
         var backend = new YayPackageBackend(runner.Object, parser.Object);
@@ -433,7 +531,7 @@ public class PackageBackendTests
     {
         var runner = new Mock<ICommandRunner>();
         var parser = new Mock<IYayOutputParser>();
-        SetupHealthyStatisticsQueries(runner);
+        SetupHealthyStatisticsQueries(runner, parser);
         // A real failure: non-zero exit *with* error output, not the "no matches" shape.
         runner.Setup(item => item.RunAsync(
                 It.Is<CommandRequest>(request => request.FileName == "pacman" && request.Arguments.SequenceEqual(new[] { "-Qd" })),

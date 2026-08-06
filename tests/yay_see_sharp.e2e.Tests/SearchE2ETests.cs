@@ -49,7 +49,10 @@ public class SearchE2ETests
                 .ToArray();
             await Assert.That(renderedText.Any(t => t!.Contains("firefox"))).IsTrue();
 
-            backend.Verify(b => b.SearchAsync("firefox", null, It.IsAny<CancellationToken>()), Times.Once);
+            // AtLeastOnce, not Once: UI-07's live-search pipeline (debounced Query change) can also
+            // fire its own SearchAsync("firefox", ...) call independently of this test's explicit
+            // SearchCommand.Execute() — both are legitimate, so the count itself isn't a contract.
+            backend.Verify(b => b.SearchAsync("firefox", null, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
         });
     }
 }

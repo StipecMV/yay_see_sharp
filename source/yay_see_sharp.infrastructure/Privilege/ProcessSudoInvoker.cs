@@ -13,6 +13,9 @@ public sealed class ProcessSudoInvoker : ISudoInvoker
     /// <summary>`sudo -n -v` should return near-instantly (it never prompts); a hang here almost certainly means a stuck PAM module, not a legitimate slow check.</summary>
     private static readonly TimeSpan ValidationTimeout = TimeSpan.FromSeconds(10);
 
+    /// <summary>`sudo -S -v` does real PAM authentication once the password is on stdin, which can legitimately take longer than a cached-timestamp check (e.g. a slow LDAP/network auth backend) — generous relative to <see cref="ValidationTimeout"/>, but still bounded: a caller-supplied <see cref="CancellationToken"/> alone (e.g. the operation's own Cancel button) is not a guarantee against a PAM module that simply never returns.</summary>
+    private static readonly TimeSpan RefreshTimeout = TimeSpan.FromSeconds(30);
+
     public async Task<bool> ValidateTimestampAsync(CancellationToken cancellationToken)
     {
         using var process = Start(["-n", "-v"], redirectStandardInput: false);
@@ -38,6 +41,9 @@ public sealed class ProcessSudoInvoker : ISudoInvoker
     public async Task<bool> RefreshWithPasswordAsync(string password, CancellationToken cancellationToken)
     {
         using var process = Start(["-S", "-v"], redirectStandardInput: true);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(RefreshTimeout);
+
         try
         {
             try
@@ -51,11 +57,14 @@ public sealed class ProcessSudoInvoker : ISudoInvoker
                 process.StandardInput.Close();
             }
 
-            await process.WaitForExitAsync(cancellationToken);
+            await process.WaitForExitAsync(timeoutCts.Token);
             return process.ExitCode == 0;
         }
         catch (OperationCanceledException)
         {
+            // Covers both a caller-requested cancellation (e.g. the user hit Cancel) and our own
+            // timeout firing (a PAM module that never returns) — either way, kill the child rather
+            // than leave a process holding the password prompt open indefinitely.
             await TerminateAsync(process);
             return false;
         }

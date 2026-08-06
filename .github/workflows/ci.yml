@@ -5,15 +5,79 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch: {}
 
 # A second push to the same branch/PR supersedes any run still in flight for it.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# NEW-01: `pull_request` (including from forks) must never schedule work on the self-hosted
+# CachyOS runner — an attacker-controlled PR branch would get arbitrary code execution on our own
+# machine. GitHub-hosted `ubuntu-24.04` handles everything a PR needs to validate: build, unit
+# tests, Demo-backed contract tests, and the headless Avalonia E2E suite. The self-hosted runner
+# only ever runs for a `push` to a protected branch or an explicit manual `workflow_dispatch` —
+# both require write access to this repo, which is the actual trust boundary here.
 jobs:
-  build-and-test:
-    name: Build, test, and scan
+  pr-checks:
+    name: Build, unit test, and scan (GitHub-hosted)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+
+    steps:
+      # Pinned to a version tag, not a commit SHA: this environment had no network access to
+      # independently resolve/verify the exact commit each tag points at when this workflow was
+      # written, and guessing a SHA would be worse than not pinning at all (either wrong-but-silent,
+      # or a hard CI failure). Documented as a known follow-up rather than done — see NEW-01 in
+      # docs/code-review-findings.md.
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore
+        run: dotnet restore yay_see_sharp.slnx
+
+      - name: Build (Debug)
+        run: dotnet build yay_see_sharp.slnx --configuration Debug --no-restore
+
+      - name: Build (Release)
+        run: dotnet build yay_see_sharp.slnx --configuration Release --no-restore
+
+      # Debug and Release now build to separate $(Configuration)-scoped output directories
+      # (NEW-08), so running the Debug-configured test binaries here is guaranteed to exercise the
+      # Debug build, not whatever the last `dotnet build` happened to produce.
+      - name: Test — domain
+        run: dotnet run --project tests/yay_see_sharp.domain.Tests --configuration Debug --no-build
+
+      - name: Test — infrastructure
+        run: dotnet run --project tests/yay_see_sharp.infrastructure.Tests --configuration Debug --no-build
+
+      - name: Test — application
+        run: dotnet run --project tests/yay_see_sharp.application.Tests --configuration Debug --no-build
+
+      - name: Test — e2e (Avalonia Headless)
+        run: dotnet run --project tests/yay_see_sharp.e2e.Tests --configuration Debug --no-build
+
+      # Deliberately not run here: yay_see_sharp.integration.Tests. Its Arch/yay-dependent cases
+      # are gated behind YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS (unset here, so they'd skip
+      # anyway), but several other cases in that project make real network calls (AUR, GitLab
+      # packaging mirror) — not appropriate to run unauthenticated against a PR from an untrusted
+      # fork. The full-suite job below covers it on every push to a protected branch.
+      - name: Dependency vulnerability scan
+        run: dotnet list yay_see_sharp.slnx package --vulnerable --include-transitive
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-pr
+          path: output/bin/**/TestResults/**
+          retention-days: 14
+
+  full-suite:
+    name: Build, test (incl. real-Arch), and scan (self-hosted CachyOS)
+    # Only a push to a protected branch or an explicit manual run — never `pull_request` — may
+    # schedule work here. See the NEW-01 note above.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     # Self-hosted CachyOS runner: yay is on PATH, .NET 10 SDK is installed, and it's the only
     # environment where the gated real-Arch install/uninstall integration tests can safely run.
     # See docs/setup-self-hosted-runner.md for how this runner is provisioned.
@@ -47,9 +111,9 @@ jobs:
       - name: Test — integration (real network/filesystem/yay, this runner is Arch)
         env:
           # Safe here specifically because this runner is a real Arch/CachyOS host with yay
-          # installed — the 3 destructive install/uninstall tests this unlocks must never run
-          # anywhere else. Do not copy this env var into a workflow that might run on a
-          # non-self-hosted or non-Arch runner.
+          # installed, only ever reached via push-to-protected-branch or manual dispatch — never
+          # pull_request. The 3 destructive install/uninstall tests this unlocks must never run
+          # anywhere else. Do not copy this env var into a job that a pull_request event can reach.
           YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS: "1"
         run: dotnet run --project tests/yay_see_sharp.integration.Tests --configuration Debug --no-build
 
@@ -60,6 +124,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: output/bin/TestResults/**
+          name: test-results-full
+          path: output/bin/**/TestResults/**
           retention-days: 14

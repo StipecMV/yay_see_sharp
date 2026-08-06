@@ -11,29 +11,28 @@
             Width="480" MaxHeight="480" HorizontalAlignment="Center" VerticalAlignment="Center">
         <Grid RowDefinitions="Auto,*,Auto" MinHeight="200">
 
-            <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-                <TextBlock Grid.Column="0" Text="{Binding TitleLabel}" FontSize="15" FontWeight="Medium"
-                           Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                <Button Grid.Column="1" Classes="subtle" Content="×" Command="{Binding CloseCommand}"/>
-            </Grid>
+            <!-- UI-12: no small × close affordance up here — the large Close button below is the
+                 only close control, easier to hit and unambiguous. -->
+            <TextBlock Grid.Row="0" Text="{Binding TitleLabel}" FontSize="30" FontWeight="Medium"
+                       Foreground="{DynamicResource Brush.Text}" Margin="0,0,0,12" TextTrimming="CharacterEllipsis"/>
 
             <Border Grid.Row="1" Background="{DynamicResource Brush.Background}" CornerRadius="8" Padding="10" MinHeight="180">
                 <Grid>
-                    <TextBlock Text="…" FontSize="13" Foreground="{DynamicResource Brush.TextFaint}"
+                    <TextBlock Text="…" FontSize="26" Foreground="{DynamicResource Brush.TextFaint}"
                                HorizontalAlignment="Center" VerticalAlignment="Center"
                                IsVisible="{Binding IsLoading}"/>
-                    <TextBlock Text="{Binding ErrorMessage}" FontSize="12.5" Foreground="{DynamicResource Brush.Destructive}"
+                    <TextBlock Text="{Binding ErrorMessage}" FontSize="25" Foreground="{DynamicResource Brush.Destructive}"
                                TextWrapping="Wrap" HorizontalAlignment="Center" VerticalAlignment="Center"
                                IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                     <ScrollViewer IsVisible="{Binding Content, Converter={x:Static ObjectConverters.IsNotNull}}">
                         <SelectableTextBlock Text="{Binding Content}" FontFamily="{DynamicResource Font.Monospace}"
-                                              FontSize="11.5" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+                                              FontSize="23" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
                     </ScrollViewer>
                 </Grid>
             </Border>
 
-            <Button Grid.Row="2" Classes="neutral" Content="{Binding CloseLabel}" Command="{Binding CloseCommand}"
-                    HorizontalAlignment="Right" Margin="0,12,0,0"/>
+            <Button Grid.Row="2" Content="{Binding CloseLabel}" Command="{Binding CloseCommand}"
+                    HorizontalAlignment="Stretch" Padding="14,12" FontSize="26" Margin="0,12,0,0"/>
 
         </Grid>
     </Border>

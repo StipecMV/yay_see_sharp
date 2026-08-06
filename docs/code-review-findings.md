@@ -1124,27 +1124,29 @@ Claude pridal do working tree:
 
 Pôvodné tvrdenie, že `.github/workflows` neexistuje, je preto zastarané. CI už obsahuje build, test a vulnerability scan kroky.
 
-Zostávajúce problémy sú:
+**Update (2026-08-06): `NEW-01` a `NEW-08` sú opravené.** `.github/workflows/ci.yml` má teraz dva joby: `pr-checks` beží na GitHub-hosted `ubuntu-24.04` a spúšťa sa len na `pull_request` (build Debug+Release, unit testy, headless E2E, vulnerability scan — bez integration testov, keďže tie robia real network calls a nemajú čo bežať proti neoverenému PR kódu); `full-suite` beží na self-hosted CachyOS runneri a spúšťa sa len na `push` alebo `workflow_dispatch` (nikdy na `pull_request`). Debug/Release output paths sú teraz oddelené cez `$(Configuration)`-scoped `OutputPath`/`IntermediateOutputPath` (`Directory.Build.props` + každý `.csproj`), takže `--no-build` v CI vždy testuje presne tú konfiguráciu, ktorú step hovorí, že testuje.
 
-- self-hosted CachyOS runner prijíma `pull_request` a spúšťa PR kód — pozri `NEW-01`,
-- Debug/Release buildy používajú spoločný output path a CI následne používa `--no-build` — pozri `NEW-08`,
-- README Tests badge je statický a nie je priamo naviazaný na GitHub Actions status,
-- release workflow spúšťa destructive Arch integration tests na self-hosted runneri bez explicitného approval gate.
+Zostávajúce (nižšia priorita, mimo rozsahu tejto opravy):
+
+- GitHub Actions v `ci.yml` sú pinnuté na verzia tag (`@v4`), nie na commit SHA — toto prostredie nemalo sieťový prístup na bezpečné overenie presných SHA hodnôt počas tejto opravy, takže pinning na SHA zostáva zdokumentovaný ako budúci krok namiesto hádania SHA hodnoty (čo by bolo horšie ako žiadny pin).
+- README Tests badge je statický a nie je priamo naviazaný na GitHub Actions status.
+- `release.yml` je `workflow_dispatch`-only (vyžaduje niekoho s write prístupom k repu, čo je samo o sebe approval gate), ale nemá samostatný GitHub Environment/reviewer gate navyše.
 
 ### Návrh opravy
 
-- Odstrániť staré tvrdenie „CI neexistuje“.
-- Opraviť bezpečnostný model podľa `NEW-01`.
-- Opraviť configuration isolation podľa `NEW-08`.
-- README badge nahradiť skutočným GitHub Actions status badge alebo ho označiť ako manuálne aktualizovaný.
-- Release workflow chrániť explicitným approval/environment gate.
+- ~~Odstrániť staré tvrdenie „CI neexistuje“.~~ Hotové.
+- ~~Opraviť bezpečnostný model podľa `NEW-01`.~~ Hotové.
+- ~~Opraviť configuration isolation podľa `NEW-08`.~~ Hotové.
+- README badge nahradiť skutočným GitHub Actions status badge alebo ho označiť ako manuálne aktualizovaný — zostáva otvorené.
+- Pinnovať Actions na commit SHA, keď bude dostupné overenie cez sieť — zostáva otvorené.
+- Release workflow chrániť explicitným approval/environment gate navyše k `workflow_dispatch` — zostáva otvorené, nízka priorita.
 
 ### Akceptačné kritériá
 
-- Review dokument opisuje aktuálny stav CI.
-- PR workflow nespúšťa nedôveryhodný kód na osobnom persistentnom Arch hoste.
-- CI testuje presnú konfiguráciu, ktorú uvádza v názve kroku.
-- Release/destructive workflow vyžaduje explicitné schválenie.
+- ~~Review dokument opisuje aktuálny stav CI.~~ Hotové (tento update).
+- ~~PR workflow nespúšťa nedôveryhodný kód na osobnom persistentnom Arch hoste.~~ Hotové — `pull_request` beží výhradne na GitHub-hosted runneri.
+- ~~CI testuje presnú konfiguráciu, ktorú uvádza v názve kroku.~~ Hotové — oddelené output paths.
+- Release/destructive workflow vyžaduje explicitné schválenie — čiastočne (manuálny `workflow_dispatch`), formálny approval gate zostáva otvorený.
 
 ---
 
@@ -1155,6 +1157,8 @@ Nasledujúce nálezy vznikli pri druhom review po implementácii fixov. Nejde o 
 ---
 
 ## NEW-01 — Self-hosted CachyOS runner spúšťa neoverený PR kód na persistentnom hoste
+
+**Stav: OPRAVENÉ (2026-08-06).** `pull_request` teraz beží výhradne v novom `pr-checks` jobe na GitHub-hosted `ubuntu-24.04`; self-hosted CachyOS runner (`full-suite` job) je gated na `if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'`, takže `pull_request` ho nikdy nemôže spustiť. Pozri `DOC-05` pre presný popis a zostávajúce (nízka priorita) položky.
 
 **Závažnosť:** HIGH; pri verejnom repository potenciálne CRITICAL
 **Typ:** cybersecurity / CI isolation
@@ -1622,6 +1626,8 @@ Application/ViewModels pozná iba contract, nie namespace konkrétnej Infrastruc
 
 ## NEW-08 — CI Debug testy môžu po Release builde používať prepisované artefakty
 
+**Stav: OPRAVENÉ (2026-08-06).** `Directory.Build.props` teraz nastavuje `OutputPath=$(MSBuildThisFileDirectory)output\bin\$(Configuration)\` centrálne pre všetky projekty; každý `.csproj`'s `IntermediateOutputPath` má tiež pridaný `$(Configuration)` segment. Debug a Release teraz buildujú do fyzicky oddelených priečinkov (`output/bin/Debug/`, `output/bin/Release/`), overené manuálne (build Debug → build Release → `dotnet run --no-build` proti Debug testom stále beží proti Debug binárkam).
+
 **Závažnosť:** LOW/MEDIUM
 **Typ:** CI correctness/reproducibility
 **Oblasť:** build output isolation
@@ -1708,6 +1714,219 @@ Pôvodný nález je preto ako „CI neexistuje“ zastaraný. Jeho bezpečnostn�
 ### Akceptačné kritériá
 
 Review dokument neobsahuje tvrdenie, že CI workflow neexistuje, keď už workflow v working tree existuje.
+
+---
+
+# 2B. UI/UX nálezy z používateľského testovania (UI-01 až UI-23)
+
+Register nálezov z manuálneho testovania na Ubuntu (približne 23 nálezov) a CachyOS (niekoľko nálezov). Presný pôvodný zoznam od používateľa nie je v repozitári ako samostatný súbor; tento register je rekonštruovaný z `docs/implementation-status.md` (časť „Zmeny z tejto session") a z `UI-xx` komentárov priamo v kóde. Stav = **implementované a overené v kóde** pri treťom review (2026-08-06), build Debug+Release 0 warningov/0 chýb, testy 268 passed / 3 skipped.
+
+| ID | Nález (rekonštruovaný) | Stav | Lokalizácia |
+|---|---|---|---|
+| UI-01 | Chýbajúce/nevýrazné vizuálne potvrdenie akcií — doplnené toast notifikácie pre install/uninstall/update/error | ✅ implementované | `ToastService`, `ToastViewModel`, `MainWindow.axaml` (toast stack), `CompositeNotificationService` |
+| UI-02 | Minimize do tray nejednotné s close-to-tray | ✅ implementované | `App.axaml.cs` — `WindowStateProperty` observer pri `HideToTray` |
+| UI-03 | Tray ikona nebola viditeľná pred prvým hide | ✅ implementované | `App.axaml.cs` — `_trayService.Show()` pri štarte (UI-21) |
+| UI-04 | Po operácii treba ručne refreshovať dáta | ✅ implementované | `InstalledPackagesViewModel` auto-refresh po `Completed` (UI-04/UI-11/UI-13) |
+| UI-05 | Kliknutie na update riadok nemá navigáciu do detailu | ✅ implementované | `DashboardViewModel.PackageActivated` → `MainWindowViewModel` → `InstalledPackagesViewModel.SelectByName`; `UpdateItemViewModel.SelectCommand`; `DashboardView.axaml` |
+| UI-06 | Toast auto-dismiss | ✅ implementované | `ToastService` — 30s auto-dismiss |
+| UI-07 | Search vyžaduje tlačidlo, nie live výsledky | ✅ implementované | `SearchViewModel` — `Throttle(300ms)` + `.Switch()` live search; `SearchView.axaml` bez tlačidla |
+| UI-08 | Prázdne search pole = prázdna obrazovka | ✅ implementované | `SearchViewModel.LoadRecommendedAsync` — curated recommended packages |
+| UI-09 | Search riadok nie je klikateľný do detailu | ✅ implementované | `SearchViewModel.SelectPackageCommand`; `SearchView.axaml` — riadok ako `Button Classes="row"` |
+| UI-10 | Search detail v samostatnom okne namiesto split panela | ✅ implementované | `SearchView.axaml` — dvojstĺpcový grid (výsledky + detail) |
+| UI-11 | Refresh tlačidlo na Dashboarde zbytočné | ✅ implementované | `DashboardView.axaml` — Refresh tlačidlo odstránené |
+| UI-12 | Refresh tlačidlo na Installed zbytočné | ✅ implementované | `InstalledPackagesView.axaml` — auto-refresh po operácii |
+| UI-13 | Installed list nemá source filter | ✅ implementované | `InstalledPackagesViewModel` — `SourceOptions` All/Official/AUR + `FilteredPackages` |
+| UI-14 | Settings v hlavnom sidebar liste | ✅ implementované | `MainWindow.axaml` — Settings tlačidlo pinned dole; `MainNavigationItems`/`SettingsNavigationItem`/`IsSettingsSelected` |
+| UI-15 | „Saved" indikátor v Settings nenápadný | ✅ implementované | toast cez `ToastService` v `SettingsViewModel` |
+| UI-16 | PKGBUILD modal malé Close | ✅ implementované | `PkgbuildView.axaml` — veľké Close tlačidlo |
+| UI-17 | Settings nevie, v akom móde beží | ✅ implementované | `SettingsViewModel.SetBackendMode(backend.Info.Mode)` v `AppBootstrapper` |
+| UI-18 | Engine picker (yay) v simulovanom móde nič nerobí bez vysvetlenia | ✅ implementované | `SettingsView.axaml.cs OnEngineOptionsPressed` → `NotifyIfSimulated`; localization keys `Settings.SimulatedMode*` |
+| UI-19 | Popis update schedule tvrdí „Every 6 hours" aj keď je denný | ✅ implementované | `LocalizationResources` — `Settings.AutoUpdate.HintDaily` = „Daily check at {0}" |
+| UI-20 | Fonty príliš malé | ✅ implementované | FontSize zdvojnásobené naprieč Views (22–38) |
+| UI-21 | Tray ikona od štartu | ✅ implementované | `App.axaml.cs` (rovnaká zmena ako UI-03) |
+| UI-22 | Toast overlay v app | ✅ implementované | `MainWindow.axaml` toast `ItemsControl` + `NotificationLevelBrushConverter` + `Color.Success` |
+| UI-23 | Chýba `.desktop` súbor / packaging pre distribúciu | ✅ implementované | `packaging/yay-see-sharp.desktop`, `packaging/icons/yay-see-sharp.png`, `docs/aur-packaging-guide.md` |
+
+**Poznámka k overeniu:** UI-01 až UI-23 sú overené na úrovni kódu (build, unit testy, headless E2E). Vizuálne a interaktívne overenie na reálnom Ubuntu/CachyOS desktope (X11/Wayland, tray, D-Bus notifikácie, reálny sudo prompt) je stále **otvorené** a patrí do manuálnej verifikácie používateľom.
+
+---
+
+# 2C. Nálezy z tretieho review (po implementácii UI/UX + NEW fixov)
+
+Tieto nálezy vznikli pri treťom prechode review (2026-08-06) po tom, čo agent oznámil kompletnú implementáciu. Build Debug aj Release: 0 warnings / 0 errors. Testy: 268 passed / 0 failed / 3 skipped. Všetky nálezy nižšie sú **neblokujúce** — nejde o regresie, ale o hardening a konzistentnosť.
+
+---
+
+## NEW-10 — Odporúčané balíky v Search spúšťajú 16 paralelných `yay` procesov
+
+**Závažnosť:** MEDIUM (Real mode performance)
+**Typ:** performance / process explosion
+**Oblasť:** SearchViewModel, live search, Real mode
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.application/ViewModels/SearchViewModel.cs:14-22
+source/yay_see_sharp.application/ViewModels/SearchViewModel.cs:185-220 (LoadRecommendedAsync)
+```
+
+### Aktuálny stav
+
+`SearchViewModel` sa konštruuje **eager** v `AppBootstrapper` (rovnako ako ostatné child screens), takže `LoadRecommendedAsync().FireAndForget()` beží **pri štarte aplikácie**. Pre každý zo 16 odporúčaných balíkov spúšťa samostatné:
+
+```csharp
+_backend.SearchAsync(name, SourceFilter)
+```
+
+v `Task.WhenAll` — teda v Real mode **16 súbežných `yay -Ss` procesov** naraz (každý refreshuje sync-db + AUR RPC). To isté sa opakuje pri každom vyprázdnení search poľa.
+
+### Prečo je to problém
+
+- 16 súbežných yay procesov pri štarte a pri každom prázdnom query = zbytočná záťaž, pomalý štart na reálnom Arch hoste, burst sieťovej a databázovej aktivity.
+- Demo mode to nemá (in-memory), takže sa to neprejaví v sandbox testoch — objaví sa až na CachyOS.
+
+### Návrh opravy
+
+1. Spojiť do **jedného** `yay -Ss -- <16 mien>` batch query a výsledky namapovať podľa názvu (parsovať cez `YayOutputParser.ParseSearch` a filtrovať presné zhody).
+2. Alebo načítať odporúčané balíky **lazy** — až keď používateľ prvýkrát otvorí Search screen (nie v konštruktore pri štarte).
+3. Alebo cacheovať výsledky na čas (napr. 5 minút), aby opakované prázdne query nevolali backend.
+
+### Akceptačné kritériá
+
+- Štart aplikácie v Real mode nespúšťa 16 súbežných yay procesov.
+- Prázdne search pole nespúšťa batch procesov pri každom vyprázdnení.
+
+---
+
+## NEW-11 — `ToastService` auto-dismiss nemá cancellation token
+
+**Závažnosť:** LOW
+**Typ:** lifecycle/hardening
+**Oblasť:** ToastService
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.application/Platform/ToastService.cs:40-42
+```
+
+### Aktuálny stav
+
+```csharp
+Task.Delay(AutoDismissAfter).ContinueWith(
+    _ => Dispatcher.UIThread.Post(() => Toasts.Remove(toast)),
+    TaskScheduler.Default);
+```
+
+Bez `CancellationToken`: pri shutdown aplikácie môže pending `ContinueWith` strieľať `Dispatcher.UIThread.Post` po zničení UI kolekcie. V praxi je to neškodné (Post po shutdown sa zahodí), ale je to lifecycle zrada — `Toasts` patrí UI a auto-dismiss by mal zaniknúť s app lifetime.
+
+### Návrh opravy
+
+- Pridať `CancellationToken` (app lifetime CTS) do `Task.Delay` a `ContinueWith` so `TaskContinuationOptions.NotOnCanceled`.
+- Prípadne auto-dismiss zrušiť pri manuálnom dismiss toastu.
+
+### Akceptačné kritériá
+
+- Po shutdown nebeží žiadny pending auto-dismiss timer.
+- Manuálne dismissnutý toast sa neskúša odstraňovať znova.
+
+---
+
+## NEW-12 — Test counts v dokumentácii sú neaktuálne (259 vs. realita 268)
+
+**Závažnosť:** LOW/MEDIUM
+**Typ:** documentation drift
+
+### Lokalizácia
+
+```text
+README.md:5 (Tests badge — 259 passed)
+docs/implementation-status.md:21 (262 total / 259 passed)
+```
+
+### Aktuálny stav
+
+Pri treťom review reálne bežalo:
+
+```text
+domain 7 / infrastructure 146 / application 94 / e2e 10 / integration 11 (+3 skipped)
+spolu 268 passed, 0 failed, 3 skipped (271 total)
+```
+
+README a implementation-status uvádzajú 259 passed / 262 total — rozdiel vznikol pridaním nových testov (`YayBackendInstallerTests`, `BackendInstallPromptViewModelTests`, `AuthPromptE2ETests`, rozšírené `UpdateSchedulerTests`/`FileLockSingleInstanceServiceTests`).
+
+### Návrh opravy
+
+- Aktualizovať README badge a implementation-status na aktuálne čísla (268 passed / 3 skipped) — najlepšie generovať z CI namiesto statického badge.
+- Pridať do `# 6. Povinný výstup implementačného agenta` požiadavku uviesť test counts z reálneho posledného behu, nie odhad.
+
+### Akceptačné kritériá
+
+- README/implementation-status čísla zodpovedajú poslednému reálnemu test runu.
+
+---
+
+## NEW-13 — `SelectByName` ticho zlyhá, ak balík ešte nie je v Installed liste
+
+**Závažnosť:** LOW
+**Typ:** UX edge case
+**Oblasť:** InstalledPackagesViewModel / Dashboard navigácia
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.application/ViewModels/InstalledPackagesViewModel.cs:192-213 (SelectByName)
+```
+
+### Aktuálny stav
+
+`SelectByName(name)` hľadá balík v `Packages` a ak tam nie je, nič neurobí — navigácia z Dashboard update listu do Installed prebehne, ale detail sa nezobrazí (tichý no-op).
+
+### Prečo je to problém
+
+Update balík by normálne mal byť nainštalovaný, ale ak je `Packages` ešte nenačítaný (refresh beží) alebo bol balík medzičasom odstránený, používateľ skončí na prázdnej obrazovke bez vysvetlenia.
+
+### Návrh opravy
+
+- Ak balík chýba: spustiť `RefreshAsync()` a po dokončení sa pokúsiť vybrať znova.
+- Alebo zobraziť explicitný stav „balík sa nenašiel / ešte sa načítava".
+
+### Akceptačné kritériá
+
+- Navigácia z Dashboard update riadku vždy skončí buď na detaile balíka, alebo na zrozumiteľnej správe.
+
+---
+
+## NEW-14 — `MainWindowViewModel` má optional `ToastService` s hidden `new`
+
+**Závažnosť:** LOW
+**Typ:** DIP konzistencia (FINDING-08/NEW-07 pattern)
+
+### Lokalizácia
+
+```text
+source/yay_see_sharp.application/ViewModels/MainWindowViewModel.cs:31-43
+```
+
+### Aktuálny stav
+
+```csharp
+ToastService? toastService = null
+...
+Toasts = (toastService ?? new ToastService()).Toasts;
+```
+
+ViewModels už majú pravidlo „žiadne hidden `new Concrete()`" (FINDING-08/NEW-07), ale `ToastService` je application-vrstva trieda, takže ho `ArchitectureTests` (ktoré hľadajú iba `infrastructure` typy) nechytia.
+
+### Návrh opravy
+
+- Zmeniť na povinný parameter `ToastService toastService` (všetci produkční volajú cez `AppBootstrapper`; testy už ho vedia odovzdať).
+- Prípadne definovať interface `IToastService` v domain/abstractions a `ToastService` ho implementovať — konzistentné s `INotificationService`.
+
+### Akceptačné kritériá
+
+- ViewModel neobsahuje žiadny `?? new Concrete()` fallback pre UI/domain služby.
+- `ArchitectureTests` pokrýva aj application-vrstva concrete services (nielen infrastructure).
 
 ---
 

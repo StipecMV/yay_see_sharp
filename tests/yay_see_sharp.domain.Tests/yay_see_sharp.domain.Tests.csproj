@@ -8,11 +8,7 @@
 
     <IsPackable>false</IsPackable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <OutputPath>..\..\output\bin\</OutputPath>
-    <IntermediateOutputPath>..\..\output\obj\yay_see_sharp.domain.Tests\</IntermediateOutputPath>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <IntermediateOutputPath>..\..\output\obj\yay_see_sharp.domain.Tests\$(Configuration)\</IntermediateOutputPath>
   </PropertyGroup>
 
   <!-- Pure domain logic tests: no Avalonia, no platform I/O, no Moq — the domain project has no

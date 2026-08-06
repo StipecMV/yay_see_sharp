@@ -27,14 +27,15 @@
 
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="2,0,0,12">
                     <icons:LogoMark Size="24"/>
-                    <TextBlock Text="Yay See Sharp" FontSize="12.5" FontWeight="SemiBold"
+                    <TextBlock Text="Yay See Sharp" FontSize="25" FontWeight="SemiBold"
                                Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <ListBox Grid.Row="1" Theme="{StaticResource NavListBox}"
                          VerticalAlignment="Top"
-                         ItemsSource="{Binding NavigationItems}"
-                         SelectedItem="{Binding SelectedNavigationItem}">
+                         ItemsSource="{Binding MainNavigationItems}"
+                         SelectedItem="{Binding SelectedNavigationItem, Mode=OneWay}"
+                         SelectionChanged="OnMainSidebarSelectionChanged">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:NavigationItemViewModel">
                             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -44,13 +45,22 @@
                                                    IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Search}"/>
                                 <icons:BoxIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
                                                 IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Installed}"/>
-                                <icons:GearIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
-                                                 IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Settings}"/>
                                 <TextBlock Text="{Binding Title}" Foreground="{Binding $parent[ListBoxItem].Foreground}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
+
+                <!-- UI-14: Settings pinned to the bottom of the sidebar, in its own group — a plain
+                     button (not a second ListBox two-way-bound to SelectedNavigationItem; see
+                     MainWindowViewModel's IsSettingsSelected doc comment for why). -->
+                <Button Grid.Row="2" Classes="navItem" Classes.selected="{Binding IsSettingsSelected}"
+                        VerticalAlignment="Bottom" Command="{Binding SelectSettingsCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <icons:GearIcon Width="14" Height="14" Stroke="{Binding $parent[Button].Foreground}"/>
+                        <TextBlock Text="{Binding SettingsNavigationItem.Title}" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
 
             </Grid>
 
@@ -60,7 +70,7 @@
                         Background="{DynamicResource Brush.AccentTint}"
                         BorderBrush="{DynamicResource Brush.Divider}" BorderThickness="0,0,0,1"
                         Padding="20,8">
-                    <TextBlock Text="{Binding WarningMessage}" FontSize="11.5"
+                    <TextBlock Text="{Binding WarningMessage}" FontSize="23"
                                Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
                 </Border>
                 <ContentControl Grid.Row="1" Content="{Binding CurrentPage}"/>
@@ -79,6 +89,32 @@
                 Background="{DynamicResource Brush.ScrimBackdrop}">
             <ContentControl Content="{Binding BackendInstallPrompt}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
         </Border>
+
+        <!-- UI-22: in-app toast stack, bottom-right, auto-dismissing (UI-06) — see ToastService. -->
+        <ItemsControl ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Spacing="8" HorizontalAlignment="Right"/>
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ToastViewModel">
+                    <Border Width="320" Background="{DynamicResource Brush.Surface}" CornerRadius="10"
+                            BorderBrush="{Binding Level, Converter={x:Static conv:NotificationLevelBrushConverter.Instance}}"
+                            BorderThickness="1" Padding="14,12" BoxShadow="{DynamicResource Shadow.Lg}">
+                        <Grid ColumnDefinitions="4,*,Auto">
+                            <Border Grid.Column="0" CornerRadius="2" Margin="0,0,10,0"
+                                    Background="{Binding Level, Converter={x:Static conv:NotificationLevelBrushConverter.Instance}}"/>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Body}" FontSize="22" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <Button Grid.Column="2" Classes="subtle" Content="×" Command="{Binding DismissCommand}" VerticalAlignment="Top"/>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
     </Panel>
 

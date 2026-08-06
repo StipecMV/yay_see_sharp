@@ -1,11 +1,7 @@
+using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 
 namespace yay_see_sharp.infrastructure.Platform;
-
-public interface IEngineDetector
-{
-    PackageManagerEngine? Detect();
-}
 
 public sealed class EngineDetector : IEngineDetector
 {

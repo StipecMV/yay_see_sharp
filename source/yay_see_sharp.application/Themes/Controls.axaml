@@ -52,6 +52,18 @@
           <Setter Property="Padding" Value="2"/>
           <Setter Property="FontSize" Value="14"/>
         </Style>
+        <!-- A clickable list row rendered as a Button (for keyboard/AT support) but shaped like the
+             plain RowFill cards used elsewhere — no border, no accent chrome, just a hover state. -->
+        <Style Selector="^.row">
+          <Setter Property="Background" Value="{DynamicResource Brush.RowFill}"/>
+          <Setter Property="BorderThickness" Value="0"/>
+          <Setter Property="Foreground" Value="{DynamicResource Brush.Text}"/>
+          <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+          <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="^.row:pointerover /template/ Border#PART_Border">
+          <Setter Property="Background" Value="{DynamicResource Brush.AccentTint}"/>
+        </Style>
       </ControlTheme>
 
       <!-- Compact bordered field for text / password entry. -->
@@ -250,6 +262,30 @@
     <Setter Property="Padding" Value="0"/>
     <Setter Property="CornerRadius" Value="8"/>
     <Setter Property="Margin" Value="0,0,0,6"/>
+  </Style>
+
+  <!-- Bottom-of-sidebar Settings row: a Button (not a ListBoxItem) styled to match
+       NavListBoxItem, with its own .selected class instead of relying on :selected — see
+       MainWindowViewModel.IsSettingsSelected for why it isn't a second selectable ListBox. -->
+  <Style Selector="Button.navItem">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Foreground" Value="{DynamicResource Brush.TextMuted}"/>
+    <Setter Property="FontSize" Value="26"/>
+    <Setter Property="Padding" Value="10,8"/>
+    <Setter Property="CornerRadius" Value="8"/>
+    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+  </Style>
+  <Style Selector="Button.navItem:pointerover /template/ Border#PART_Border">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentTint}"/>
+  </Style>
+  <Style Selector="Button.navItem.selected /template/ Border#PART_Border">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentTint}"/>
+  </Style>
+  <Style Selector="Button.navItem.selected TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
   </Style>
 
 </Styles>

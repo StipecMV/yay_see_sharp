@@ -84,7 +84,10 @@ public sealed class YayOutputParser : IYayOutputParser
         return new PackageDetails(summary, packager, homepage, dependencies, []);
     }
 
-    public IReadOnlyList<UpdateInfo> ParseUpdates(string output, IReadOnlySet<string>? foreignPackageNames = null)
+    public IReadOnlyList<UpdateInfo> ParseUpdates(
+        string output,
+        IReadOnlySet<string>? foreignPackageNames = null,
+        IReadOnlySet<string>? confirmedAurPackageNames = null)
     {
         var updates = new List<UpdateInfo>();
         foreach (var line in output.Split('\n'))
@@ -100,14 +103,17 @@ public sealed class YayOutputParser : IYayOutputParser
                 name,
                 match.Groups["current"].Value,
                 match.Groups["available"].Value,
-                ClassifySource(name, foreignPackageNames),
+                ClassifySource(name, foreignPackageNames, confirmedAurPackageNames),
                 0));
         }
 
         return updates;
     }
 
-    public IReadOnlyList<PackageSummary> ParseInstalled(string output, IReadOnlySet<string>? foreignPackageNames = null)
+    public IReadOnlyList<PackageSummary> ParseInstalled(
+        string output,
+        IReadOnlySet<string>? foreignPackageNames = null,
+        IReadOnlySet<string>? confirmedAurPackageNames = null)
     {
         var packages = new List<PackageSummary>();
         foreach (var line in output.Split('\n'))
@@ -123,7 +129,7 @@ public sealed class YayOutputParser : IYayOutputParser
                 name,
                 match.Groups["version"].Value,
                 string.Empty,
-                ClassifySource(name, foreignPackageNames),
+                ClassifySource(name, foreignPackageNames, confirmedAurPackageNames),
                 0,
                 PackageState.Installed));
         }
@@ -131,11 +137,76 @@ public sealed class YayOutputParser : IYayOutputParser
         return packages;
     }
 
-    /// <summary>Single source-classification rule shared by ParseInstalled/ParseUpdates: a name present in the foreign-package set (from `pacman -Qm`) is AUR; everything else is Official.</summary>
-    private static PackageSource ClassifySource(string packageName, IReadOnlySet<string>? foreignPackageNames) =>
-        foreignPackageNames is not null && foreignPackageNames.Contains(packageName)
-            ? PackageSource.Aur
-            : PackageSource.Official;
+    public IReadOnlySet<string> ParseAurConfirmedNames(string output)
+    {
+        var confirmed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string? pendingName = null;
+        string? pendingRepository = null;
+
+        void Flush()
+        {
+            if (pendingName is not null && pendingRepository is not null && IsAurRepository(pendingRepository))
+            {
+                confirmed.Add(pendingName);
+            }
+
+            pendingName = null;
+            pendingRepository = null;
+        }
+
+        foreach (var line in output.Split('\n'))
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                Flush();
+                continue;
+            }
+
+            var separator = line.IndexOf(':');
+            if (separator <= 0)
+            {
+                continue;
+            }
+
+            var key = line[..separator].Trim();
+            var value = line[(separator + 1)..].Trim();
+            if (key.Equals("Name", StringComparison.OrdinalIgnoreCase))
+            {
+                pendingName = value;
+            }
+            else if (key.Equals("Repository", StringComparison.OrdinalIgnoreCase))
+            {
+                pendingRepository = value;
+            }
+        }
+
+        Flush();
+        return confirmed;
+    }
+
+    /// <summary>
+    /// Source-classification rule shared by ParseInstalled/ParseUpdates: a name confirmed against
+    /// AUR metadata (<paramref name="confirmedAurPackageNames"/>) is AUR; a name merely present in
+    /// the foreign-package set (from `pacman -Qm`, not-in-any-configured-repo) but not confirmed is
+    /// Foreign — never assumed to be AUR just because it's out-of-repo; everything else is Official.
+    /// </summary>
+    private static PackageSource ClassifySource(
+        string packageName,
+        IReadOnlySet<string>? foreignPackageNames,
+        IReadOnlySet<string>? confirmedAurPackageNames)
+    {
+        if (confirmedAurPackageNames is not null && confirmedAurPackageNames.Contains(packageName))
+        {
+            return PackageSource.Aur;
+        }
+
+        if (foreignPackageNames is not null && foreignPackageNames.Contains(packageName))
+        {
+            return PackageSource.Foreign;
+        }
+
+        return PackageSource.Official;
+    }
 
     private static Dictionary<string, string> ParseFields(string output)
     {

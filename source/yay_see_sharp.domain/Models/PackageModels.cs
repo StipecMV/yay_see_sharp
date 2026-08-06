@@ -11,6 +11,8 @@ public enum PackageSource
 {
     Official,
     Aur,
+    /// <summary>`pacman -Qm` (foreign/not-in-any-configured-repo) but not confirmed against AUR metadata — could be AUR, a manually downloaded package, an external repo, or a locally built one. Never assume Official for these.</summary>
+    Foreign,
 }
 
 public enum PackageState

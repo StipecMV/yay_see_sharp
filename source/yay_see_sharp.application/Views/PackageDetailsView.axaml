@@ -19,12 +19,12 @@
                 <Border Grid.Column="0" Width="48" Height="48" CornerRadius="10" VerticalAlignment="Top"
                         Background="{DynamicResource Brush.AccentTint}">
                     <TextBlock Text="{Binding Summary.Name, Converter={x:Static conv:InitialsConverter.Instance}}"
-                               FontFamily="{DynamicResource Font.Monospace}" FontWeight="SemiBold" FontSize="15"
+                               FontFamily="{DynamicResource Font.Monospace}" FontWeight="SemiBold" FontSize="30"
                                Foreground="{DynamicResource Brush.Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Summary.Name}" FontSize="17" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
-                    <TextBlock FontSize="12" Foreground="{DynamicResource Brush.TextMuted}">
+                    <TextBlock Text="{Binding Summary.Name}" FontSize="34" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
+                    <TextBlock FontSize="24" Foreground="{DynamicResource Brush.TextMuted}">
                         <Run Text="v"/><Run Text="{Binding Summary.Version}"/>
                         <Run Text=" · "/>
                         <Run Text="{Binding Summary.Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"/>
@@ -32,37 +32,37 @@
                 </StackPanel>
                 <Border Grid.Column="2" Theme="{StaticResource TagAccent}" VerticalAlignment="Top"
                         IsVisible="{Binding IsInstalled}">
-                    <TextBlock Text="{Binding StateLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TagAccentFg}"/>
+                    <TextBlock Text="{Binding StateLabel}" FontSize="21" Foreground="{DynamicResource Brush.TagAccentFg}"/>
                 </Border>
             </Grid>
 
-            <TextBlock Text="{Binding Details.Summary.Description}" FontSize="13" LineHeight="21"
+            <TextBlock Text="{Binding Details.Summary.Description}" FontSize="26" LineHeight="21"
                        Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
 
             <TextBlock Text="{Binding NoDetailsLabel}" IsVisible="{Binding Details, Converter={x:Static ObjectConverters.IsNull}}"
-                       FontSize="12.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+                       FontSize="25" Foreground="{DynamicResource Brush.TextFaint}"/>
             <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
-                       FontSize="12.5" Foreground="{DynamicResource Brush.Destructive}" TextWrapping="Wrap"/>
+                       FontSize="25" Foreground="{DynamicResource Brush.Destructive}" TextWrapping="Wrap"/>
 
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" IsVisible="{Binding Details, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,10">
-                    <TextBlock Text="{Binding MaintainerLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TextFaint}"/>
-                    <TextBlock Text="{Binding Details.Maintainer}" FontSize="13" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding MaintainerLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}"/>
+                    <TextBlock Text="{Binding Details.Maintainer}" FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10" IsVisible="{Binding Summary.Votes, Converter={x:Static ObjectConverters.IsNotNull}}">
-                    <TextBlock Text="{Binding VotesLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+                    <TextBlock Text="{Binding VotesLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}"/>
                     <TextBlock Text="{Binding Summary.Votes, StringFormat='★ {0:N0}'}"
-                               FontSize="13" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                               FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Row="1" Grid.Column="0">
-                    <TextBlock Text="{Binding InstallSizeLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TextFaint}"/>
+                    <TextBlock Text="{Binding InstallSizeLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}"/>
                     <TextBlock Text="{Binding Summary.InstalledSizeBytes, Converter={x:Static conv:ByteSizeConverter.Instance}}"
-                               FontSize="13" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                               FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
                 </StackPanel>
             </Grid>
 
             <StackPanel IsVisible="{Binding HasDependencies}">
-                <TextBlock Text="{Binding DependenciesLabel}" FontSize="10.5" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,0,0,8"/>
+                <TextBlock Text="{Binding DependenciesLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,0,0,8"/>
                 <ItemsControl ItemsSource="{Binding Details.Dependencies}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -72,7 +72,7 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:PackageDependency">
                             <Border Theme="{StaticResource TagNeutral}" Margin="0,0,6,6">
-                                <TextBlock Text="{Binding Name}" FontSize="11" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
+                                <TextBlock Text="{Binding Name}" FontSize="22" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -80,7 +80,7 @@
             </StackPanel>
 
             <StackPanel Spacing="4" IsVisible="{Binding Operation, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <TextBlock Text="{Binding Operation.StageLabel}" FontSize="12" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
+                <TextBlock Text="{Binding Operation.StageLabel}" FontSize="24" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
                 <ProgressBar Minimum="0" Maximum="100" Value="{Binding Operation.Percent}" Height="4"
                              Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"/>
                 <Button Classes="neutral" Content="{Binding Operation.CancelLabel}" Command="{Binding Operation.CancelCommand}" HorizontalAlignment="Left"/>

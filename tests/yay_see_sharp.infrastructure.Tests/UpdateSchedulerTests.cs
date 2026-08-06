@@ -18,7 +18,12 @@ public class UpdateSchedulerTests
         public DateTimeOffset UtcNow { get; set; }
 
         public DateTimeOffset LocalNow { get; set; }
+
+        /// <summary>Defaults to UTC so every existing test that doesn't care about DST (they only assert Hour, not Offset) keeps working without having to set this explicitly.</summary>
+        public TimeZoneInfo LocalTimeZone { get; set; } = TimeZoneInfo.Utc;
     }
+
+    private static readonly TimeZoneInfo Bratislava = TimeZoneInfo.FindSystemTimeZoneById("Europe/Bratislava");
 
     private sealed class FakeSettings : IUpdateScheduleSettings
     {
@@ -54,15 +59,13 @@ public class UpdateSchedulerTests
     }
 
     /// <summary>
-    /// Runs the scheduler against a fake clock fixed at "now" (in the given offset, standing in
-    /// for a user's local timezone), with the schedule time already behind "now" so the next run
-    /// lands the following day — then jumps the fake clock there and asserts the check fires
-    /// exactly at that local time, not the UTC equivalent.
+    /// Runs the scheduler against a fake clock fixed at "now" in the given zone, with the schedule
+    /// time already behind "now" so the next run lands the following day — then jumps the fake
+    /// clock there and asserts the check fires exactly at that local time, not the UTC equivalent.
     /// </summary>
-    private static async Task AssertScheduledRunFiresAtLocalTime(TimeSpan localOffset)
+    private static async Task AssertScheduledRunFiresAtLocalTime(TimeZoneInfo zone, DateTimeOffset now, TimeSpan expectedOffset)
     {
-        var now = new DateTimeOffset(2026, 1, 15, 9, 0, 0, localOffset);
-        var clock = new FakeClock { LocalNow = now, UtcNow = now.ToUniversalTime() };
+        var clock = new FakeClock { LocalNow = now, UtcNow = now.ToUniversalTime(), LocalTimeZone = zone };
         var settings = new FakeSettings { AutoUpdateCheckEnabled = true, UpdateScheduleTime = new TimeOnly(8, 0) };
         var updates = new[] { new UpdateInfo("firefox", "1.0", "2.0", PackageSource.Official, 0) };
         var backend = CreateBackend(updates);
@@ -80,7 +83,7 @@ public class UpdateSchedulerTests
             await WaitUntilAsync(() => scheduler.NextScheduledRun is not null, TimeSpan.FromSeconds(2));
 
             var nextRun = scheduler.NextScheduledRun!.Value;
-            await Assert.That(nextRun.Offset).IsEqualTo(localOffset);
+            await Assert.That(nextRun.Offset).IsEqualTo(expectedOffset);
             await Assert.That(nextRun.Hour).IsEqualTo(8);
 
             clock.LocalNow = nextRun.AddSeconds(1);
@@ -99,22 +102,25 @@ public class UpdateSchedulerTests
     [Test]
     public async Task Scheduled_run_fires_at_the_configured_time_in_utc()
     {
-        await AssertScheduledRunFiresAtLocalTime(TimeSpan.Zero);
+        await AssertScheduledRunFiresAtLocalTime(
+            TimeZoneInfo.Utc, new DateTimeOffset(2026, 1, 15, 9, 0, 0, TimeSpan.Zero), TimeSpan.Zero);
     }
 
     [Test]
     public async Task Scheduled_run_fires_at_the_configured_local_time_in_bratislava_winter_offset()
     {
-        // CET (winter): UTC+1.
-        await AssertScheduledRunFiresAtLocalTime(TimeSpan.FromHours(1));
+        // CET (winter): UTC+1. January is safely outside any DST transition window.
+        await AssertScheduledRunFiresAtLocalTime(
+            Bratislava, new DateTimeOffset(2026, 1, 15, 9, 0, 0, TimeSpan.FromHours(1)), TimeSpan.FromHours(1));
     }
 
     [Test]
     public async Task Scheduled_run_fires_at_the_configured_local_time_in_bratislava_summer_offset()
     {
         // CEST (summer/DST): UTC+2 — a scheduler comparing against UTC instead of local time
-        // would fire this two hours late.
-        await AssertScheduledRunFiresAtLocalTime(TimeSpan.FromHours(2));
+        // would fire this two hours late. July is safely outside any DST transition window.
+        await AssertScheduledRunFiresAtLocalTime(
+            Bratislava, new DateTimeOffset(2026, 7, 15, 9, 0, 0, TimeSpan.FromHours(2)), TimeSpan.FromHours(2));
     }
 
     [Test]

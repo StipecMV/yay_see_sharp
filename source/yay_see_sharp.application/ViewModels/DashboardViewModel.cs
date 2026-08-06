@@ -26,6 +26,7 @@ public class DashboardViewModel : LocalizedViewModelBase
         RefreshCommand = ReactiveCommand.CreateFromTask(RefreshAsync);
         UpdateAllCommand = ReactiveCommand.CreateFromTask(() => RunUpdateAsync([]));
         UpdatePackageCommand = ReactiveCommand.CreateFromTask<string>(name => RunUpdateAsync([name]));
+        SelectPackageCommand = ReactiveCommand.Create<string>(name => PackageActivated?.Invoke(this, name));
         DismissNotificationCommand = ReactiveCommand.Create(() => { NotificationMessage = null; });
         InitialLoadTask = RefreshAsync();
     }
@@ -39,7 +40,12 @@ public class DashboardViewModel : LocalizedViewModelBase
 
     public ReactiveCommand<string, Unit> UpdatePackageCommand { get; }
 
+    public ReactiveCommand<string, Unit> SelectPackageCommand { get; }
+
     public ReactiveCommand<Unit, Unit> DismissNotificationCommand { get; }
+
+    /// <summary>UI-05: raised when the user clicks an update row (not the Update button) — MainWindowViewModel navigates to Installed and selects this package's detail.</summary>
+    public event EventHandler<string>? PackageActivated;
 
     public string RefreshLabel => Localization.GetString("Dashboard.Refresh");
 
@@ -86,7 +92,7 @@ public class DashboardViewModel : LocalizedViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _updates, value);
             this.RaisePropertyChanged(nameof(HasNoUpdates));
-            UpdateItems = value.Select(info => new UpdateItemViewModel(info, UpdatePackageCommand, Localization)).ToArray();
+            UpdateItems = value.Select(info => new UpdateItemViewModel(info, UpdatePackageCommand, SelectPackageCommand, Localization)).ToArray();
         }
     }
 

@@ -58,15 +58,21 @@ public static class AppBootstrapper
         // fallback (that used to make production behavior depend on a default parameter no one
         // was looking at).
         var engineDetector = new EngineDetector();
-        var folderBrowserService = new FolderBrowserService();
         var pkgbuildService = new PkgbuildService();
+
+        // UI-22: the in-app toast overlay always shows (it's a different surface than the OS
+        // notification center, so it isn't gated by Settings.NotificationsEnabled — that toggle
+        // only controls whether the OS-level notify-send notification also fires). Built before
+        // SettingsViewModel — unlike the OS notifier it has no dependency on Settings itself, so
+        // SettingsViewModel can use it directly for the UI-15 "Saved" toast.
+        var toastService = new ToastService();
 
         // Built before the backend factory (which needs it as the live IBuildDirectoryPolicy) and
         // before the other child screens (as the live IUninstallPolicy / INotificationSettings),
         // so everything reads from the same in-memory instance the Settings screen edits, not a
         // stale reload from disk.
         var settingsViewModel = new SettingsViewModel(
-            settingsStore, localizationService, settings, engineDetector, folderBrowserService);
+            settingsStore, localizationService, settings, engineDetector, toastService);
 
         // Constructed before MainWindowViewModel exists (the backend needs it earlier than the
         // window does) — its password prompt is wired to the real UI once the view model exists.
@@ -80,8 +86,15 @@ public static class AppBootstrapper
             settingsViewModel);
         var backend = backendFactory.Create();
 
-        var notificationService = new SettingsAwareNotificationService(
-            new NotifySendNotificationService(new SystemCommandRunner()), settingsViewModel);
+        // UI-17/UI-18: SettingsViewModel is constructed before the backend exists (it's needed as
+        // an IBuildDirectoryPolicy input to the factory above), so it can't take the mode via its
+        // constructor — told about it here instead, once it's known.
+        settingsViewModel.SetBackendMode(backend.Info.Mode);
+
+        var notificationService = new CompositeNotificationService(
+            new SettingsAwareNotificationService(
+                new NotifySendNotificationService(new SystemCommandRunner()), settingsViewModel),
+            toastService);
 
         var dashboard = new DashboardViewModel(backend, localizationService, notificationService);
         var search = new SearchViewModel(backend, localizationService, pkgbuildService, settingsViewModel, notificationService);
@@ -94,7 +107,7 @@ public static class AppBootstrapper
             : null;
 
         var viewModel = new MainWindowViewModel(
-            backend, localizationService, settingsViewModel, dashboard, search, installed, backendInstaller);
+            backend, localizationService, settingsViewModel, dashboard, search, installed, backendInstaller, toastService);
         privilegeService.PasswordPrompt = _ => viewModel.RequestAuthenticationAsync();
 
         // Always started: the loop itself re-checks Settings.AutoUpdateCheckEnabled every poll

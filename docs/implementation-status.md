@@ -2,7 +2,7 @@
 
 > Tento dokument popisuje **skutočný stav behu kódu**, nie plán. Kde je funkcia len čiastočná, je to explicitne uvedené aj s tým, čo chýba. Automatizovaná verifikácia (build + testy) je striktne oddelená od manuálnej GUI/real-Arch verifikácie — druhá menovaná nebola v tomto sandboxe vykonaná (bez X11/Wayland, bez `notify-send`/D-Bus session, bez reálneho Arch/CachyOS hosta).
 
-**Dátum poslednej verifikácie:** 2026-08-05.
+**Dátum poslednej verifikácie:** 2026-08-06.
 
 ## Posledný build/test stav (automatizovaná verifikácia)
 
@@ -10,25 +10,40 @@
 dotnet restore yay_see_sharp.slnx
 dotnet build yay_see_sharp.slnx --configuration Debug
 dotnet build yay_see_sharp.slnx --configuration Release
-dotnet run --project tests/yay_see_sharp.domain.Tests/
-dotnet run --project tests/yay_see_sharp.infrastructure.Tests/
-dotnet run --project tests/yay_see_sharp.application.Tests/
-dotnet run --project tests/yay_see_sharp.integration.Tests/
-dotnet run --project tests/yay_see_sharp.e2e.Tests/
+dotnet run --project tests/yay_see_sharp.domain.Tests
+dotnet run --project tests/yay_see_sharp.infrastructure.Tests
+dotnet run --project tests/yay_see_sharp.application.Tests
+dotnet run --project tests/yay_see_sharp.integration.Tests
+dotnet run --project tests/yay_see_sharp.e2e.Tests
 ```
 
-- **Build:** Debug aj Release — 0 warnings, 0 errors, celé riešenie (3 source assembly: `yay_see_sharp.domain`, `yay_see_sharp.infrastructure`, `yay_see_sharp.application`; 5 test projektov nižšie).
-- **Testy — spolu 235: 232 passed, 0 failed, 3 skipped.**
+- **Build:** Debug aj Release — 0 warnings, 0 errors, celé riešenie (3 source assembly: `yay_see_sharp.domain`, `yay_see_sharp.infrastructure`, `yay_see_sharp.application`; 5 test projektov nižšie). Debug a Release teraz buildujú do oddelených `output/bin/$(Configuration)/` priečinkov (NEW-08) — predtým zdieľali jeden priečinok, takže `dotnet run --no-build` po Release builde v skutočnosti spúšťal Release binárky pod menom "Debug".
+- **Testy — spolu 262: 259 passed, 0 failed, 3 skipped** (skipnuté = gated real-Arch integration testy, pozri nižšie).
 
 | Projekt | Príkaz | Total | Passed | Failed | Skipped |
 | --- | --- | --- | --- | --- | --- |
-| `tests/yay_see_sharp.domain.Tests` | `dotnet run --project tests/yay_see_sharp.domain.Tests/` | 2 | 2 | 0 | 0 |
-| `tests/yay_see_sharp.infrastructure.Tests` | `dotnet run --project tests/yay_see_sharp.infrastructure.Tests/` | 128 | 128 | 0 | 0 |
-| `tests/yay_see_sharp.application.Tests` | `dotnet run --project tests/yay_see_sharp.application.Tests/` | 83 | 83 | 0 | 0 |
-| `tests/yay_see_sharp.integration.Tests` (manuálny beh, nie CI) | `dotnet run --project tests/yay_see_sharp.integration.Tests/` | 14 | 11 | 0 | 3 (gated na Arch/CachyOS host) |
-| `tests/yay_see_sharp.e2e.Tests` (Avalonia Headless) | `dotnet run --project tests/yay_see_sharp.e2e.Tests/` | 8 | 8 | 0 | 0 |
+| `tests/yay_see_sharp.domain.Tests` | `dotnet run --project tests/yay_see_sharp.domain.Tests` | 7 | 7 | 0 | 0 |
+| `tests/yay_see_sharp.infrastructure.Tests` | `dotnet run --project tests/yay_see_sharp.infrastructure.Tests` | 144 | 144 | 0 | 0 |
+| `tests/yay_see_sharp.application.Tests` | `dotnet run --project tests/yay_see_sharp.application.Tests` | 89 | 89 | 0 | 0 |
+| `tests/yay_see_sharp.integration.Tests` (manuálny beh, nie CI na `pull_request`) | `dotnet run --project tests/yay_see_sharp.integration.Tests` | 14 | 11 | 0 | 3 (gated na Arch/CachyOS host) |
+| `tests/yay_see_sharp.e2e.Tests` (Avalonia Headless) | `dotnet run --project tests/yay_see_sharp.e2e.Tests` | 8 | 8 | 0 | 0 |
 
-3 skipnuté testy v `integration.Tests` sú deštruktívne (reálne inštalujú/odinštalujú balík `hello` cez `yay`) a gated cez `YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1` — bežia iba na Arch/CachyOS hoste s `yay` na `PATH`. Na tomto vývojovom stroji sa preto automaticky preskakujú; to je očakávané správanie, nie zlyhanie.
+3 skipnuté testy v `integration.Tests` sú deštruktívne (reálne inštalujú/odinštalujú balík `hello` cez `yay`) a gated cez `YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1` — bežia iba na Arch/CachyOS hoste s `yay` na `PATH` (self-hosted CachyOS CI runner, `push`/`workflow_dispatch` only — pozri NEW-01 nižšie). Na tomto vývojovom stroji sa preto automaticky preskakujú; to je očakávané správanie, nie zlyhanie.
+
+## Zmeny z tejto session (code review + UI/UX findings)
+
+Táto session prešla kompletný zoznam review findings (`docs/code-review-findings.md`) aj používateľské UI/UX nálezy. Zhrnutie zmien oproti stavu vyššie zdokumentovanému k 2026-08-05:
+
+- **FINDING-04 + NEW-05** (AUR/Official/Foreign klasifikácia): `PackageSource` má nový `Foreign` člen. `pacman -Qm` sa už nemapuje priamo na `Aur` — mapuje sa na `Foreign`, kým sa nepotvrdí cez bulk `yay -Si` dotaz (yay transparentne zlučuje sync-db + AUR RPC info). `AurCount` v štatistikách počíta len potvrdené AUR balíky.
+- **NEW-04** (scheduler DST): `UpdateScheduleCalculator` teraz berie explicitný `TimeZoneInfo` a používa `TimeZoneInfo.ConvertTimeToUtc`/transition rules namiesto zachovávania "dnešného" UTC offsetu. Spring-forward (neexistujúci čas) sa posúva na najbližší platný okamih; fall-back (duplicated hour) sa rieši ako standard-time (druhý) výskyt. `IClock` má nový `LocalTimeZone` člen.
+- **FINDING-06 + NEW-02 + NEW-03** (single-instance IPC): `TryAcquire()` je teraz transakčný — listener failure uvoľní lock a vráti `false` s `LastFailureReason`. `Dispose()` maže activation socket PRED uvoľnením lock streamu (nie po). Runtime adresár sa overuje na owner-only permissions pred použitím.
+- **FINDING-08 + NEW-07**: `IEngineDetector` presunuté z `infrastructure.Platform` do `domain.Abstractions`. `ArchitectureTests` rozšírený — zakazuje akýkoľvek typ (vrátane interfaces) z `infrastructure` namespace na ViewModel fields/constructor parametroch.
+- **FINDING-09**: `BuildDirectory` browse UI (tlačidlo + folder browser modal) odstránené zo `SettingsView`/`SettingsViewModel`. Model field `BuildDirectory` a `IBuildDirectoryPolicy` runtime wiring zostávajú nezmenené (future feature).
+- **NEW-06**: nové testy `YayBackendInstallerTests` (CachyOS pacman cesta, plain-Arch AUR bootstrap cesta, success/failure/cancellation, presné `CommandRequest`/`WorkingDirectory`, temp dir cleanup). `BackendInstallPromptViewModel.ConfirmAsync` má teraz `try/catch` (exception → terminálny Failed stav, nie zamrznutý modal) a operácia je opakovateľná po zlyhaní. Cancel tlačidlo pridané do `BackendInstallPromptView`.
+- **FINDING-12**: `ProcessSudoInvoker.RefreshWithPasswordAsync` má teraz 30s timeout (predtým iba `ValidateTimestampAsync` mal timeout).
+- **NEW-01**: `.github/workflows/ci.yml` rozdelený na `pr-checks` (GitHub-hosted `ubuntu-24.04`, len `pull_request`, build+unit+E2E, žiadne destructive Arch testy) a `full-suite` (self-hosted CachyOS, len `push`/`workflow_dispatch`).
+- **NEW-08**: `Directory.Build.props` centralizuje `OutputPath=$(Configuration)`-scoped; každý `IntermediateOutputPath` má tiež `$(Configuration)` segment.
+- **UI-01 až UI-23**: toast notification systém (`ToastService`, `IToastService`-ekvivalent cez existujúci `INotificationService`, `CompositeNotificationService`), Settings presunuté na spodok sidebaru, live search s debounce + odporúčané balíky pri prázdnom query, klikateľné riadky (Dashboard update list, Search results) navigujúce do detailu, Refresh tlačidlá odstránené v prospech auto-refresh po operáciách, PKGBUILD veľké Close tlačidlo, dynamický popis update schedule, tray ikona viditeľná od štartu + minimize-to-tray, `.desktop` súbor (`packaging/yay-see-sharp.desktop`), fonty zdvojnásobené naprieč aplikáciou. Podrobnosti pri jednotlivých sekciách nižšie.
 
 - **Vulnerability scan:** `dotnet list yay_see_sharp.slnx package --vulnerable --include-transitive` — žiadne známe zraniteľné balíky (pozri sekciu "Verifikácia" nižšie pre presný výstup pri poslednom behu).
 - **Manuálna GUI verifikácia:** **nebola vykonaná.** Sandbox nemá X11/Wayland displej, `notify-send`/D-Bus session ani reálny Arch/CachyOS host. Všetko nižšie označené "Hotové" je hotové a **testované na úrovni kódu** (unit/integration/headless E2E testy), nie vizuálne overené v bežiacej aplikácii na reálnom hardvéri. Kde je rozdiel medzi "kód existuje a je testovaný" a "overené na reálnom Arch hoste" významný, je to uvedené explicitne pri danej položke.

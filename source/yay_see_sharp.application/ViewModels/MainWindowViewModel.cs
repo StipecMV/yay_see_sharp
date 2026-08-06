@@ -1,4 +1,7 @@
+using System.Collections.ObjectModel;
+using System.Reactive;
 using ReactiveUI;
+using yay_see_sharp.application.Platform;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 
@@ -25,7 +28,8 @@ public class MainWindowViewModel : LocalizedViewModelBase
         DashboardViewModel dashboard,
         SearchViewModel search,
         InstalledPackagesViewModel installed,
-        IBackendInstaller? backendInstaller = null)
+        IBackendInstaller? backendInstaller = null,
+        ToastService? toastService = null)
         : base(localizationService)
     {
         Backend = backend;
@@ -35,6 +39,7 @@ public class MainWindowViewModel : LocalizedViewModelBase
         Dashboard = dashboard;
         Search = search;
         Installed = installed;
+        Toasts = (toastService ?? new ToastService()).Toasts;
 
         NavigationItems =
         [
@@ -43,12 +48,36 @@ public class MainWindowViewModel : LocalizedViewModelBase
             new NavigationItemViewModel(NavigationSection.Installed, "Navigation.Installed", localizationService),
             new NavigationItemViewModel(NavigationSection.Settings, "Navigation.Settings", localizationService),
         ];
+        // Computed once and cached (not a `=>` getter) so a ListBox's ItemsSource binding and a
+        // later `viewModel.MainNavigationItems` read (e.g. in a test locating that same ListBox)
+        // are guaranteed to be the exact same collection instance — a fresh array on every access
+        // would never ReferenceEquals what's actually bound.
+        MainNavigationItems = NavigationItems.Where(item => item.Section != NavigationSection.Settings).ToArray();
+        SettingsNavigationItem = NavigationItems.Single(item => item.Section == NavigationSection.Settings);
+        SelectSettingsCommand = ReactiveCommand.Create(() => { SelectedNavigationItem = SettingsNavigationItem; });
+
+        // UI-05: clicking a dashboard update row navigates to that package's detail on Installed.
+        Dashboard.PackageActivated += (_, name) =>
+        {
+            SelectedNavigationItem = NavigationItems.Single(item => item.Section == NavigationSection.Installed);
+            Installed.SelectByName(name);
+        };
 
         _selectedNavigationItem = NavigationItems[0];
         _currentPage = Loading;
 
+        // UI-14: the bottom Settings row is a plain button (not a second ListBox two-way-bound to
+        // the same SelectedNavigationItem) — two selection-bound controls sharing one property
+        // with disjoint ItemsSources fight each other: whichever control's binding reacts to the
+        // other's "item not in my list" case last wins, so clicking Settings could get silently
+        // reverted by the main list's own binding. IsSettingsSelected drives the row's selected
+        // visual state directly instead.
         this.WhenAnyValue(x => x.SelectedNavigationItem)
-            .Subscribe(item => CurrentPage = ResolvePage(item));
+            .Subscribe(item =>
+            {
+                CurrentPage = ResolvePage(item);
+                this.RaisePropertyChanged(nameof(IsSettingsSelected));
+            });
 
         Settings.WhenAnyValue(x => x.Theme).Subscribe(_ =>
         {
@@ -89,6 +118,9 @@ public class MainWindowViewModel : LocalizedViewModelBase
 
     public SettingsViewModel Settings { get; }
 
+    /// <summary>UI-22: the live in-app toast stack, bound to an overlay in MainWindow. Backed by the same ToastService instance AppBootstrapper fans real notifications into, so every INotificationService.SendAsync call across the app shows up here too.</summary>
+    public ObservableCollection<ToastViewModel> Toasts { get; }
+
     public IPackageBackend Backend { get; }
 
     public BackendInfo BackendInfo => Backend.Info;
@@ -120,6 +152,16 @@ public class MainWindowViewModel : LocalizedViewModelBase
     };
 
     public IReadOnlyList<NavigationItemViewModel> NavigationItems { get; }
+
+    /// <summary>UI-14: Settings lives in its own sidebar group, pinned to the bottom — everything else in <see cref="NavigationItems"/> except it.</summary>
+    public IReadOnlyList<NavigationItemViewModel> MainNavigationItems { get; }
+
+    /// <summary>UI-14: the Settings nav entry, shown as its own row pinned to the sidebar's bottom.</summary>
+    public NavigationItemViewModel SettingsNavigationItem { get; }
+
+    public bool IsSettingsSelected => SelectedNavigationItem.Section == NavigationSection.Settings;
+
+    public ReactiveCommand<Unit, Unit> SelectSettingsCommand { get; }
 
     public ThemePreference Theme => Settings.Theme;
 

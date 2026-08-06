@@ -25,14 +25,23 @@ public sealed class BackendInstallPromptViewModel : LocalizedViewModelBase
     {
         _installer = installer;
 
-        var notStarted = this.WhenAnyValue(x => x.Operation).Select(operation => operation is null);
+        // Confirm is enabled before the first attempt, and again after a Failed/Cancelled terminal
+        // stage — NEW-06: the operation must be repeatable, not permanently locked out by one
+        // failed attempt. It stays disabled while running and after a successful Completed (a
+        // completed install doesn't get re-run; ShowRestartHint takes over from there).
+        var canConfirm = this.WhenAnyValue(x => x.Operation)
+            .Select(operation => operation is null
+                ? Observable.Return(true)
+                : operation.WhenAnyValue(o => o.Stage)
+                    .Select(stage => stage is PackageOperationStage.Failed or PackageOperationStage.Cancelled))
+            .Switch();
         var notRunning = this.WhenAnyValue(x => x.Operation)
             .Select(operation => operation is null
                 ? Observable.Return(true)
                 : operation.WhenAnyValue(o => o.IsRunning).Select(running => !running))
             .Switch();
 
-        ConfirmCommand = ReactiveCommand.CreateFromTask(ConfirmAsync, notStarted);
+        ConfirmCommand = ReactiveCommand.CreateFromTask(ConfirmAsync, canConfirm);
         CloseCommand = ReactiveCommand.Create(Close, notRunning);
     }
 
@@ -77,9 +86,26 @@ public sealed class BackendInstallPromptViewModel : LocalizedViewModelBase
         operation.WhenAnyValue(o => o.Stage).Subscribe(_ => this.RaisePropertyChanged(nameof(ShowRestartHint)));
         Operation = operation;
 
-        await foreach (var progress in _installer.InstallAsync(operation.CancellationToken))
+        try
         {
-            operation.Apply(progress);
+            await foreach (var progress in _installer.InstallAsync(operation.CancellationToken))
+            {
+                operation.Apply(progress);
+            }
+        }
+        catch (OperationCanceledException) when (operation.CancellationToken.IsCancellationRequested)
+        {
+            operation.Apply(new PackageOperationProgress(
+                PackageOperationKind.InstallBackend, PackageOperationStage.Cancelled, 0, "Installation cancelled."));
+        }
+        catch (Exception ex)
+        {
+            // NEW-06: an installer that throws instead of yielding a Failed progress (e.g. an I/O
+            // error creating its temp build directory before its own try/finally even starts) must
+            // still leave the modal in a terminal, user-facing, closable-and-retryable state —
+            // never stuck with IsRunning permanently true and no way to dismiss or try again.
+            operation.Apply(new PackageOperationProgress(
+                PackageOperationKind.InstallBackend, PackageOperationStage.Failed, 0, ex.Message));
         }
     }
 

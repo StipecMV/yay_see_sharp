@@ -3,6 +3,7 @@
              xmlns:vm="using:yay_see_sharp.application.ViewModels"
              xmlns:models="using:yay_see_sharp.domain.Models"
              xmlns:conv="using:yay_see_sharp.application.Converters"
+             xmlns:icons="using:yay_see_sharp.application.Views.Icons"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="560"
@@ -13,32 +14,57 @@
     <Panel>
         <DockPanel>
 
-            <Grid DockPanel.Dock="Top" Margin="20,16,20,10" ColumnDefinitions="*,Auto">
-                <TextBlock Grid.Column="0" Text="{Binding EmptyLabel}" IsVisible="{Binding HasNoPackages}"
-                           FontSize="12.5" Foreground="{DynamicResource Brush.TextFaint}"/>
-                <Button Grid.Column="1" Classes="neutral" Content="{Binding RefreshLabel}" Command="{Binding RefreshCommand}"/>
-            </Grid>
+            <!-- Always visible, not conditional — real systems can have thousands of installed
+                 packages, so filter + search are needed even before the list feels "long". -->
+            <StackPanel DockPanel.Dock="Top" Margin="20,16,20,10" Spacing="10">
+                <ListBox Theme="{StaticResource SegmentedListBox}"
+                         ItemsSource="{Binding SourceOptions}"
+                         SelectedItem="{Binding SelectedSourceOption}"
+                         HorizontalAlignment="Left">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}"/>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Border Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Divider}"
+                        BorderThickness="1" CornerRadius="8" Padding="12,8">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <icons:SearchIcon Grid.Column="0" Width="15" Height="15" Margin="0,0,8,0"
+                                           Stroke="{DynamicResource Brush.TextFaint}"/>
+                        <TextBox Grid.Column="1" Text="{Binding Query}" PlaceholderText="{Binding PlaceholderLabel}"
+                                 Background="Transparent" BorderThickness="0" Padding="0"/>
+                    </Grid>
+                </Border>
+            </StackPanel>
+
+            <TextBlock DockPanel.Dock="Top" Margin="20,0,20,10" Text="{Binding EmptyLabel}" IsVisible="{Binding HasNoPackages}"
+                       FontSize="25" Foreground="{DynamicResource Brush.TextFaint}"/>
+
+            <TextBlock DockPanel.Dock="Top" Margin="20,0,20,10" Text="{Binding NoResultsLabel}" IsVisible="{Binding HasNoFilteredResults}"
+                       FontSize="25" Foreground="{DynamicResource Brush.TextFaint}"/>
 
             <TextBlock DockPanel.Dock="Top" Margin="20,0" Text="{Binding ErrorMessage}"
                        IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
-                       Foreground="{DynamicResource Brush.Destructive}" FontSize="12" TextWrapping="Wrap"/>
+                       Foreground="{DynamicResource Brush.Destructive}" FontSize="24" TextWrapping="Wrap"/>
 
             <Grid DockPanel.Dock="Top" ColumnDefinitions="2*,3*">
                 <ScrollViewer Grid.Column="0" Margin="20,0,10,16">
-                    <ListBox Classes="plain" ItemsSource="{Binding Packages}" SelectedItem="{Binding SelectedPackage}">
+                    <ListBox Classes="plain" ItemsSource="{Binding FilteredPackages}" SelectedItem="{Binding SelectedPackage}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="models:PackageSummary" x:CompileBindings="False">
                                 <Border Background="{DynamicResource Brush.RowFill}" CornerRadius="8" Padding="10,9">
                                     <Grid ColumnDefinitions="*,64,52,44">
-                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="13"
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="26"
                                                    Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
-                                        <TextBlock Grid.Column="1" Text="{Binding Version}" FontSize="11" FontFamily="{DynamicResource Font.Monospace}"
+                                        <TextBlock Grid.Column="1" Text="{Binding Version}" FontSize="22" FontFamily="{DynamicResource Font.Monospace}"
                                                    Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center"/>
                                         <TextBlock Grid.Column="2" Text="{Binding InstalledSizeBytes, Converter={x:Static conv:ByteSizeConverter.Instance}}"
-                                                   FontSize="11" Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center"/>
+                                                   FontSize="22" Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center"/>
                                         <Border Grid.Column="3" Theme="{StaticResource TagNeutral}" HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"
-                                                       FontSize="9.5" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
+                                                       FontSize="19" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -60,7 +86,7 @@
                     Background="{DynamicResource Brush.Surface}" CornerRadius="14" Padding="20">
                 <StackPanel Spacing="12">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="{Binding BuildJob.TitleLabel}" FontSize="15" FontWeight="Medium"
+                        <TextBlock Grid.Column="0" Text="{Binding BuildJob.TitleLabel}" FontSize="30" FontWeight="Medium"
                                    Foreground="{DynamicResource Brush.Text}"/>
                         <Button Grid.Column="1" Classes="subtle" Content="×" Command="{Binding BuildJob.MinimizeCommand}"/>
                     </Grid>
@@ -69,7 +95,7 @@
                             <ItemsControl ItemsSource="{Binding BuildJob.LogLines}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="x:String">
-                                        <TextBlock Text="{Binding}" FontFamily="{DynamicResource Font.Monospace}" FontSize="11.5"
+                                        <TextBlock Text="{Binding}" FontFamily="{DynamicResource Font.Monospace}" FontSize="23"
                                                    Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -79,7 +105,7 @@
                     <ProgressBar Minimum="0" Maximum="100" Value="{Binding BuildJob.Operation.Percent}" Height="4"
                                  Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"/>
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0" Text="{Binding BuildJob.Operation.StageLabel}" FontSize="11.5"
+                        <TextBlock Grid.Column="0" Text="{Binding BuildJob.Operation.StageLabel}" FontSize="23"
                                    Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center"/>
                         <Button Grid.Column="1" Classes="neutral" Content="{Binding BuildJob.RunInBackgroundLabel}"
                                 Command="{Binding BuildJob.MinimizeCommand}"/>
@@ -94,7 +120,7 @@
                 Background="{DynamicResource Brush.Surface}" CornerRadius="8" Padding="12,8" Cursor="Hand">
             <Border.IsHitTestVisible>True</Border.IsHitTestVisible>
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="{Binding BuildJob.TitleLabel}" FontSize="12" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding BuildJob.TitleLabel}" FontSize="24" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
                 <Button Classes="neutral" Content="⤢" Padding="6,3" Command="{Binding BuildJob.RestoreCommand}"/>
             </StackPanel>
         </Border>

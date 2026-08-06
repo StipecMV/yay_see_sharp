@@ -20,6 +20,7 @@
       <Color x:Key="Color.AccentTint">#299184d9</Color>
 
       <Color x:Key="Color.Destructive">#d99b91</Color>
+      <Color x:Key="Color.Success">#8fd99b</Color>
 
       <Color x:Key="Color.TagNeutralBg">#17e9e9ed</Color>
       <Color x:Key="Color.TagNeutralFg">#b3e9e9ed</Color>
@@ -49,6 +50,7 @@
       <Color x:Key="Color.AccentTint">#1a6d61b8</Color>
 
       <Color x:Key="Color.Destructive">#a8493a</Color>
+      <Color x:Key="Color.Success">#3f8a4d</Color>
 
       <Color x:Key="Color.TagNeutralBg">#0f232332</Color>
       <Color x:Key="Color.TagNeutralFg">#a6232332</Color>
@@ -80,6 +82,7 @@
   <SolidColorBrush x:Key="Brush.AccentTint" Color="{DynamicResource Color.AccentTint}"/>
 
   <SolidColorBrush x:Key="Brush.Destructive" Color="{DynamicResource Color.Destructive}"/>
+  <SolidColorBrush x:Key="Brush.Success" Color="{DynamicResource Color.Success}"/>
 
   <SolidColorBrush x:Key="Brush.TagNeutralBg" Color="{DynamicResource Color.TagNeutralBg}"/>
   <SolidColorBrush x:Key="Brush.TagNeutralFg" Color="{DynamicResource Color.TagNeutralFg}"/>

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Yay See Sharp
+Comment=Avalonia UI front-end for the yay AUR helper
+Exec=yay-see-sharp
+Icon=yay-see-sharp
+Terminal=false
+Categories=System;PackageManager;
+StartupWMClass=yay_see_sharp.application

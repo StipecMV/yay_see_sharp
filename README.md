@@ -1,7 +1,7 @@
 # Yay See Sharp
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Tests](https://img.shields.io/badge/tests-232%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-259%20passed-brightgreen)
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 ![Avalonia](https://img.shields.io/badge/Avalonia%20UI-12.x-6E40C9)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
@@ -35,8 +35,11 @@ A fast, minimal desktop GUI for the [`yay`](https://github.com/Jguer/yay) AUR he
 - **In-app PKGBUILD viewer** — fetched straight from the AUR, no browser round-trip
 - **Orphan cleanup** on uninstall, configurable as a default
 - **Live English/Slovak localization** — switch languages without restarting
-- **System tray** integration with minimize-to-tray
+- **System tray** integration — icon visible from startup, minimize-to-tray and close-to-tray
+- **In-app toast notifications** for install/uninstall/update results and errors, auto-dismissing after 30s
 - Secure privilege elevation via `sudo`, with the password never touching argv, logs, or disk
+
+> **Future feature — AUR helper build directory:** a custom `--builddir` for `yay` install/update operations is modeled in the settings persistence layer (`SettingsViewModel.BuildDirectory`, `IBuildDirectoryPolicy`) and already wired into `YayPackageBackend`, but is **not exposed in the current UI** — there is no Settings screen control for it yet. It's always unset today and has no effect on install/update behavior.
 
 ## Requirements
 
@@ -56,7 +59,7 @@ dotnet run --project source/yay_see_sharp.application/yay_see_sharp.application.
 
 The active mode is detected automatically at startup: Arch Linux/CachyOS with `yay` installed runs in **Real mode**; everything else runs in **Demo mode** with simulated data.
 
-> **Real mode status:** the Real backend (`YayPackageBackend`) is implemented and covered by unit/contract tests against a faked `yay`/`pacman` process runner — it has **not** been run against a live Arch/CachyOS host with real `yay` in this repository's own CI. Demo mode, all headless E2E UI tests, and the architecture/composition-root checks *are* verified automatically on every build. See [`docs/implementation-status.md`](docs/implementation-status.md) for the exact test-level breakdown (unit vs. integration vs. "needs a real Arch host").
+> **Real mode status:** the Real backend (`YayPackageBackend`) is implemented and covered by unit/contract tests against a faked `yay`/`pacman` process runner — it has **not** been run against a live Arch/CachyOS host with real `yay` in this repository's own CI. Demo mode, all headless E2E UI tests, and the architecture/composition-root checks *are* verified automatically on every build. **"Code exists" is not the same as "verified working on a real host":** anything that needs a real display session, a real D-Bus/notification daemon, a real system tray, or a real `sudo` prompt (tray icon behavior, desktop notifications, the interactive privilege-elevation dialog, the `yay` install flow) is exercised only in Demo mode and headless E2E here — it requires manual verification on an actual Arch/CachyOS desktop before being trusted in production. See [`docs/implementation-status.md`](docs/implementation-status.md) for the exact test-level breakdown (unit vs. integration vs. "needs a real Arch host").
 
 ## Architecture
 

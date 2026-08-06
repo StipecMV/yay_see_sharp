@@ -3,7 +3,6 @@ using yay_see_sharp.application.Views;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Demo;
-using yay_see_sharp.infrastructure.Filesystem;
 using yay_see_sharp.infrastructure.Http;
 using yay_see_sharp.infrastructure.Localization;
 using yay_see_sharp.infrastructure.Platform;
@@ -28,7 +27,7 @@ public static class TestShellFactory
         var settingsStore = new FileSettingsStore(
             Path.Combine(Path.GetTempPath(), $"yay-see-sharp-e2e-{Guid.NewGuid():N}.json"));
         var settings = new SettingsViewModel(
-            settingsStore, actualLocalization, AppSettings.Default, new EngineDetector(), new FolderBrowserService());
+            settingsStore, actualLocalization, AppSettings.Default, new EngineDetector());
         var pkgbuildService = new PkgbuildService();
         var dashboard = new DashboardViewModel(actualBackend, actualLocalization);
         var search = new SearchViewModel(actualBackend, actualLocalization, pkgbuildService, settings);

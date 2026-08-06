@@ -5,11 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
-    <OutputPath>..\..\output\bin\</OutputPath>
-    <IntermediateOutputPath>..\..\output\obj\yay_see_sharp.infrastructure\</IntermediateOutputPath>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <IntermediateOutputPath>..\..\output\obj\yay_see_sharp.infrastructure\$(Configuration)\</IntermediateOutputPath>
   </PropertyGroup>
 
   <ItemGroup>

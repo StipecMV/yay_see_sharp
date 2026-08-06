@@ -26,7 +26,7 @@ public sealed class YayPackageBackend : IPackageBackend
         _commandRunner = commandRunner;
         _outputParser = outputParser;
         _privilegeService = privilegeService;
-        _pacmanQueryService = pacmanQueryService ?? new PacmanQueryService(commandRunner);
+        _pacmanQueryService = pacmanQueryService ?? new PacmanQueryService(commandRunner, outputParser);
         _buildDirectoryPolicy = buildDirectoryPolicy;
         Info = info ?? new BackendInfo(
             "arch",
@@ -163,6 +163,17 @@ public sealed class YayPackageBackend : IPackageBackend
             new CommandRequest("yay", ["-Qu"]),
             cancellationToken: cancellationToken);
 
+        // yay -Qu (like pacman -Qu) exits 1 when there are simply no updates — a real, valid
+        // "nothing to update", not a failed query. Only a non-zero exit that isn't this specific
+        // shape counts as an actual failure. WasCancelled is excluded so a genuinely cancelled
+        // check never gets misreported as "no updates" just because the killed process happened
+        // to report exit code 1.
+        if (result.ExitCode == 1 && !result.WasCancelled)
+        {
+            _lastUpdateCheck = DateTimeOffset.UtcNow;
+            return Array.Empty<UpdateInfo>();
+        }
+
         if (!result.Succeeded)
         {
             throw new InvalidOperationException(
@@ -170,8 +181,9 @@ public sealed class YayPackageBackend : IPackageBackend
         }
 
         var foreignNames = await _pacmanQueryService.GetForeignPackageNamesAsync(cancellationToken);
+        var confirmedAurNames = await _pacmanQueryService.GetConfirmedAurPackageNamesAsync(foreignNames, cancellationToken);
         _lastUpdateCheck = DateTimeOffset.UtcNow;
-        return _outputParser.ParseUpdates(result.CombinedText, foreignNames);
+        return _outputParser.ParseUpdates(result.CombinedText, foreignNames, confirmedAurNames);
     }
 
     public async Task<IReadOnlyList<PackageSummary>> GetInstalledPackagesAsync(
@@ -188,7 +200,8 @@ public sealed class YayPackageBackend : IPackageBackend
         }
 
         var foreignNames = await _pacmanQueryService.GetForeignPackageNamesAsync(cancellationToken);
-        return _outputParser.ParseInstalled(result.CombinedText, foreignNames);
+        var confirmedAurNames = await _pacmanQueryService.GetConfirmedAurPackageNamesAsync(foreignNames, cancellationToken);
+        return _outputParser.ParseInstalled(result.CombinedText, foreignNames, confirmedAurNames);
     }
 
     public async IAsyncEnumerable<PackageOperationProgress> InstallAsync(

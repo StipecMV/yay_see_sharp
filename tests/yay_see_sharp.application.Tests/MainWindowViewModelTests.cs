@@ -21,7 +21,7 @@ public class MainWindowViewModelTests
         var pkgbuildService = Mock.Of<IPkgbuildService>();
         var settings = new SettingsViewModel(
             new FileSettingsStore(), localizationService, AppSettings.Default,
-            Mock.Of<IEngineDetector>(), Mock.Of<IFolderBrowserService>());
+            Mock.Of<IEngineDetector>());
         return new MainWindowViewModel(
             backend,
             localizationService,

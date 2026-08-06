@@ -131,12 +131,12 @@ public sealed class UpdateScheduler : IUpdateScheduler
                     // GetNextRun always returns a time strictly after the "now" passed to it, so
                     // the target is computed once and cached — recomputing it every tick from the
                     // current "now" would make the due-check below never fire.
-                    NextScheduledRun ??= UpdateScheduleCalculator.GetNextRun(now, _settings.UpdateScheduleTime);
+                    NextScheduledRun ??= UpdateScheduleCalculator.GetNextRun(now, _settings.UpdateScheduleTime, _clock.LocalTimeZone);
 
                     if (now >= NextScheduledRun.Value)
                     {
                         await TryRunCheckNowAsync(cancellationToken);
-                        NextScheduledRun = UpdateScheduleCalculator.GetNextRun(_clock.LocalNow, _settings.UpdateScheduleTime);
+                        NextScheduledRun = UpdateScheduleCalculator.GetNextRun(_clock.LocalNow, _settings.UpdateScheduleTime, _clock.LocalTimeZone);
                     }
                 }
                 else
