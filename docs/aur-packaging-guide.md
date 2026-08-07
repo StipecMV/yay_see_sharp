@@ -71,8 +71,8 @@ reason (there isn't one here).
 
 ## 3. The `yay` dependency
 
-`yay_see_sharp` is a front-end for `yay` — but per `docs/product-requirements.md` and
-`docs/implementation-status.md`, the app runs fine in **Demo mode** without `yay` on `PATH` (any
+`yay_see_sharp` is a front-end for `yay` — but per `docs/product-requirements.md` and the
+README, the app runs fine in **Demo mode** without `yay` on `PATH` (any
 non-Arch host, or Arch/CachyOS without `yay` installed), and on Arch/CachyOS without `yay` it
 offers an in-app install flow (`BackendInstallPromptViewModel`) rather than refusing to start.
 

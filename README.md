@@ -1,7 +1,7 @@
 # Yay See Sharp
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Tests](https://img.shields.io/badge/tests-259%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-268%20passed-brightgreen)
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 ![Avalonia](https://img.shields.io/badge/Avalonia%20UI-12.x-6E40C9)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
@@ -59,7 +59,7 @@ dotnet run --project source/yay_see_sharp.application/yay_see_sharp.application.
 
 The active mode is detected automatically at startup: Arch Linux/CachyOS with `yay` installed runs in **Real mode**; everything else runs in **Demo mode** with simulated data.
 
-> **Real mode status:** the Real backend (`YayPackageBackend`) is implemented and covered by unit/contract tests against a faked `yay`/`pacman` process runner — it has **not** been run against a live Arch/CachyOS host with real `yay` in this repository's own CI. Demo mode, all headless E2E UI tests, and the architecture/composition-root checks *are* verified automatically on every build. **"Code exists" is not the same as "verified working on a real host":** anything that needs a real display session, a real D-Bus/notification daemon, a real system tray, or a real `sudo` prompt (tray icon behavior, desktop notifications, the interactive privilege-elevation dialog, the `yay` install flow) is exercised only in Demo mode and headless E2E here — it requires manual verification on an actual Arch/CachyOS desktop before being trusted in production. See [`docs/implementation-status.md`](docs/implementation-status.md) for the exact test-level breakdown (unit vs. integration vs. "needs a real Arch host").
+> **Real mode status:** the Real backend (`YayPackageBackend`) is implemented and covered by unit/contract tests against a faked `yay`/`pacman` process runner — it has **not** been run against a live Arch/CachyOS host with real `yay` in this repository's own CI. Demo mode, all headless E2E UI tests, and the architecture/composition-root checks *are* verified automatically on every build. **"Code exists" is not the same as "verified working on a real host":** anything that needs a real display session, a real D-Bus/notification daemon, a real system tray, or a real `sudo` prompt (tray icon behavior, desktop notifications, the interactive privilege-elevation dialog, the `yay` install flow) is exercised only in Demo mode and headless E2E here — it requires manual verification on an actual Arch/CachyOS desktop before being trusted in production.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ graph TD
 
 The UI never shells out to `yay`, `pacman`, or any command directly — every package operation goes through `IPackageBackend`, so the same ViewModels drive both the real backend and the Demo backend identically.
 
-See [`docs/architecture.md`](docs/architecture.md) for the full breakdown and [`docs/implementation-status.md`](docs/implementation-status.md) for exactly what's implemented, tested, and any known gaps.
+See [`docs/architecture.md`](docs/architecture.md) for the full breakdown, [`docs/product-requirements.md`](docs/product-requirements.md) for the requirements, and [`docs/aur-packaging-guide.md`](docs/aur-packaging-guide.md) for packaging on the AUR.
 
 ## Testing
 
