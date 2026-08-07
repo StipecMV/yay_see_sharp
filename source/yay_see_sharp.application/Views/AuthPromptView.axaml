@@ -8,13 +8,13 @@
              x:Class="yay_see_sharp.application.Views.AuthPromptView"
              x:DataType="vm:AuthPromptViewModel">
 
-    <Border Width="360" Background="{DynamicResource Brush.Surface}" CornerRadius="14" Padding="22">
-        <StackPanel Spacing="14">
+    <Border Width="720" Background="{DynamicResource Brush.Surface}" CornerRadius="20" Padding="40">
+        <StackPanel Spacing="28">
 
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Width="38" Height="38" CornerRadius="9" Background="{DynamicResource Brush.AccentTint}">
-                    <icons:LockIcon Width="17" Height="17" Stroke="{DynamicResource Brush.Accent}"
-                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" Spacing="20">
+                <Border Width="76" Height="76" CornerRadius="18" Background="{DynamicResource Brush.AccentTint}">
+                    <icons:LockIcon Width="34" Height="34" Stroke="{DynamicResource Brush.Accent}"
+                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <TextBlock Text="{Binding TitleLabel}" FontSize="32" FontWeight="Medium"
                            Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
@@ -24,7 +24,7 @@
                        Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
 
             <StackPanel>
-                <TextBlock Text="{Binding PasswordLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,5"/>
+                <TextBlock Text="{Binding PasswordLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,0,0,10"/>
                 <!-- Enter confirms, same as clicking Authenticate — respects the command's own
                      CanExecute (empty password), so it's a no-op rather than a silent submit. -->
                 <TextBox Text="{Binding Password}" PasswordChar="•">
@@ -34,8 +34,8 @@
                 </TextBox>
             </StackPanel>
 
-            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,0">
-                <Button Grid.Column="1" Classes="neutral" Content="{Binding CancelLabel}" Command="{Binding CancelCommand}" Margin="0,0,8,0"/>
+            <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,0">
+                <Button Grid.Column="1" Classes="neutral" Content="{Binding CancelLabel}" Command="{Binding CancelCommand}" Margin="0,0,16,0"/>
                 <Button Grid.Column="2" Content="{Binding AuthenticateLabel}" Command="{Binding AuthenticateCommand}"/>
             </Grid>
 

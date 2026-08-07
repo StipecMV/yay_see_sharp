@@ -13,16 +13,16 @@
 
     <Panel>
     <ScrollViewer>
-        <StackPanel Margin="20" Spacing="16">
+        <StackPanel Margin="40" Spacing="28">
 
-            <Grid ColumnDefinitions="48,*,Auto">
-                <Border Grid.Column="0" Width="48" Height="48" CornerRadius="10" VerticalAlignment="Top"
+            <Grid ColumnDefinitions="96,*,Auto">
+                <Border Grid.Column="0" Width="96" Height="96" CornerRadius="20" VerticalAlignment="Top"
                         Background="{DynamicResource Brush.AccentTint}">
                     <TextBlock Text="{Binding Summary.Name, Converter={x:Static conv:InitialsConverter.Instance}}"
-                               FontFamily="{DynamicResource Font.Monospace}" FontWeight="SemiBold" FontSize="30"
+                               FontFamily="{DynamicResource Font.Monospace}" FontWeight="SemiBold" FontSize="44"
                                Foreground="{DynamicResource Brush.Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
-                <StackPanel Grid.Column="1" Margin="12,0" VerticalAlignment="Center">
+                <StackPanel Grid.Column="1" Margin="24,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding Summary.Name}" FontSize="34" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
                     <TextBlock FontSize="24" Foreground="{DynamicResource Brush.TextMuted}">
                         <Run Text="v"/><Run Text="{Binding Summary.Version}"/>
@@ -32,7 +32,7 @@
                 </StackPanel>
                 <Border Grid.Column="2" Theme="{StaticResource TagAccent}" VerticalAlignment="Top"
                         IsVisible="{Binding IsInstalled}">
-                    <TextBlock Text="{Binding StateLabel}" FontSize="21" Foreground="{DynamicResource Brush.TagAccentFg}"/>
+                    <TextBlock Text="{Binding StateLabel}" FontSize="24" Foreground="{DynamicResource Brush.TagAccentFg}"/>
                 </Border>
             </Grid>
 
@@ -45,24 +45,24 @@
                        FontSize="25" Foreground="{DynamicResource Brush.Destructive}" TextWrapping="Wrap"/>
 
             <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" IsVisible="{Binding Details, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,10">
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,0,20">
                     <TextBlock Text="{Binding MaintainerLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}"/>
-                    <TextBlock Text="{Binding Details.Maintainer}" FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding Details.Maintainer}" FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,6,0,0"/>
                 </StackPanel>
-                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,10" IsVisible="{Binding Summary.Votes, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,0,0,20" IsVisible="{Binding Summary.Votes, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <TextBlock Text="{Binding VotesLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}"/>
                     <TextBlock Text="{Binding Summary.Votes, StringFormat='★ {0:N0}'}"
-                               FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                               FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,6,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Row="1" Grid.Column="0">
                     <TextBlock Text="{Binding InstallSizeLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}"/>
                     <TextBlock Text="{Binding Summary.InstalledSizeBytes, Converter={x:Static conv:ByteSizeConverter.Instance}}"
-                               FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,3,0,0"/>
+                               FontSize="26" Foreground="{DynamicResource Brush.Text}" Margin="0,6,0,0"/>
                 </StackPanel>
             </Grid>
 
             <StackPanel IsVisible="{Binding HasDependencies}">
-                <TextBlock Text="{Binding DependenciesLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,0,0,8"/>
+                <TextBlock Text="{Binding DependenciesLabel}" FontSize="21" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,0,0,16"/>
                 <ItemsControl ItemsSource="{Binding Details.Dependencies}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -71,30 +71,30 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="models:PackageDependency">
-                            <Border Theme="{StaticResource TagNeutral}" Margin="0,0,6,6">
-                                <TextBlock Text="{Binding Name}" FontSize="22" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
+                            <Border Theme="{StaticResource TagNeutral}" Margin="0,0,12,12">
+                                <TextBlock Text="{Binding Name}" FontSize="24" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </StackPanel>
 
-            <StackPanel Spacing="4" IsVisible="{Binding Operation, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <StackPanel Spacing="8" IsVisible="{Binding Operation, Converter={x:Static ObjectConverters.IsNotNull}}">
                 <TextBlock Text="{Binding Operation.StageLabel}" FontSize="24" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
-                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Operation.Percent}" Height="4"
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Operation.Percent}" Height="8"
                              Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"/>
                 <Button Classes="neutral" Content="{Binding Operation.CancelLabel}" Command="{Binding Operation.CancelCommand}" HorizontalAlignment="Left"/>
             </StackPanel>
 
-            <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
+            <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
                 <Button Grid.Column="0" Classes="destructive" Content="{Binding UninstallLabel}" Command="{Binding UninstallCommand}"
                         IsVisible="{Binding IsInstalled}"
-                        HorizontalContentAlignment="Center" Margin="0,0,4,0"/>
+                        HorizontalContentAlignment="Center" Margin="0,0,8,0"/>
                 <Button Grid.Column="0" Content="{Binding InstallLabel}" Command="{Binding InstallCommand}"
                         IsVisible="{Binding !IsInstalled}"
-                        HorizontalContentAlignment="Center" Margin="0,0,4,0"/>
+                        HorizontalContentAlignment="Center" Margin="0,0,8,0"/>
                 <Button Grid.Column="1" Content="{Binding ViewPkgbuildLabel}" Command="{Binding ViewPkgbuildCommand}"
-                        HorizontalContentAlignment="Center" Margin="4,0,0,0"/>
+                        HorizontalContentAlignment="Center" Margin="8,0,0,0"/>
             </Grid>
 
         </StackPanel>

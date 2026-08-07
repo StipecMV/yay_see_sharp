@@ -8,13 +8,13 @@
              x:Class="yay_see_sharp.application.Views.BackendInstallPromptView"
              x:DataType="vm:BackendInstallPromptViewModel">
 
-    <Border Width="420" Background="{DynamicResource Brush.Surface}" CornerRadius="14" Padding="22">
-        <StackPanel Spacing="14">
+    <Border Width="840" Background="{DynamicResource Brush.Surface}" CornerRadius="20" Padding="40">
+        <StackPanel Spacing="28">
 
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <Border Width="38" Height="38" CornerRadius="9" Background="{DynamicResource Brush.AccentTint}">
-                    <icons:DetectIcon Width="17" Height="17" Stroke="{DynamicResource Brush.Accent}"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <StackPanel Orientation="Horizontal" Spacing="20">
+                <Border Width="76" Height="76" CornerRadius="18" Background="{DynamicResource Brush.AccentTint}">
+                    <icons:DetectIcon Width="34" Height="34" Stroke="{DynamicResource Brush.Accent}"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <TextBlock Text="{Binding TitleLabel}" FontSize="32" FontWeight="Medium"
                            Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
@@ -23,16 +23,16 @@
             <TextBlock Text="{Binding BodyLabel}" FontSize="25" LineHeight="19"
                        Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
 
-            <Border Background="{DynamicResource Brush.Background}" CornerRadius="8" Padding="10">
+            <Border Background="{DynamicResource Brush.Background}" CornerRadius="12" Padding="20">
                 <TextBlock Text="{Binding DisplayCommand}" FontFamily="{DynamicResource Font.Monospace}"
                            FontSize="23" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
             </Border>
 
-            <StackPanel Spacing="8" IsVisible="{Binding Operation, Converter={x:Static ObjectConverters.IsNotNull}}">
-                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Operation.Percent}" Height="4"
+            <StackPanel Spacing="16" IsVisible="{Binding Operation, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <ProgressBar Minimum="0" Maximum="100" Value="{Binding Operation.Percent}" Height="8"
                              Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"/>
                 <TextBlock Text="{Binding Operation.StageLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextFaint}"/>
-                <Border Background="{DynamicResource Brush.Background}" CornerRadius="8" Padding="10" Height="90">
+                <Border Background="{DynamicResource Brush.Background}" CornerRadius="12" Padding="20" Height="180">
                     <ScrollViewer>
                         <TextBlock Text="{Binding Operation.OutputText}" FontFamily="{DynamicResource Font.Monospace}"
                                    FontSize="22" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
@@ -44,10 +44,10 @@
                        Foreground="{DynamicResource Brush.Accent}" TextWrapping="Wrap"
                        IsVisible="{Binding ShowRestartHint}"/>
 
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,4,0,0">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,8,0,0">
                 <Button Grid.Column="1" Classes="neutral" Content="{Binding Operation.CancelLabel}" Command="{Binding Operation.CancelCommand}"
-                        IsVisible="{Binding Operation.IsRunning}" Margin="0,0,8,0"/>
-                <Button Grid.Column="2" Classes="neutral" Content="{Binding CloseLabel}" Command="{Binding CloseCommand}" Margin="0,0,8,0"/>
+                        IsVisible="{Binding Operation.IsRunning}" Margin="0,0,16,0"/>
+                <Button Grid.Column="2" Classes="neutral" Content="{Binding CloseLabel}" Command="{Binding CloseCommand}" Margin="0,0,16,0"/>
                 <Button Grid.Column="3" Content="{Binding ConfirmLabel}" Command="{Binding ConfirmCommand}"/>
             </Grid>
 

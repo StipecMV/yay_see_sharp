@@ -11,11 +11,11 @@
 
     <Panel>
         <ScrollViewer>
-            <StackPanel Margin="24,20" Spacing="20" MaxWidth="480">
+            <StackPanel Margin="40,32" Spacing="40" MaxWidth="860">
 
                 <StackPanel>
                     <TextBlock Text="{Binding AppearanceLabel}" FontSize="26" FontWeight="Medium"
-                               Foreground="{DynamicResource Brush.Text}" Margin="0,0,0,10"/>
+                               Foreground="{DynamicResource Brush.Text}" Margin="0,0,0,16"/>
                     <ListBox Theme="{StaticResource SegmentedListBox}" HorizontalAlignment="Left"
                              ItemsSource="{Binding ThemeOptions}" SelectedValue="{Binding Theme}" SelectedValueBinding="{Binding Value}">
                         <ListBox.ItemTemplate>
@@ -28,8 +28,8 @@
 
                 <StackPanel>
                     <TextBlock Text="{Binding LanguageLabel}" FontSize="26" FontWeight="Medium"
-                               Foreground="{DynamicResource Brush.Text}" Margin="0,0,0,10"/>
-                    <ComboBox Width="220" HorizontalAlignment="Left"
+                               Foreground="{DynamicResource Brush.Text}" Margin="0,0,0,16"/>
+                    <ComboBox Width="440" HorizontalAlignment="Left"
                               ItemsSource="{Binding LanguageOptions}" SelectedValue="{Binding Language}" SelectedValueBinding="{Binding Value}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate>
@@ -38,13 +38,13 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <TextBlock Text="{Binding LanguageHintLabel}" FontSize="22" Foreground="{DynamicResource Brush.TextFaint}"
-                               TextWrapping="Wrap" Margin="0,6,0,0"/>
+                               TextWrapping="Wrap" Margin="0,12,0,0"/>
                 </StackPanel>
 
                 <StackPanel>
                     <TextBlock Text="{Binding EngineLabel}" FontSize="26" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
-                    <TextBlock Text="{Binding EngineHintLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,2,0,10"/>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding EngineHintLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,4,0,20"/>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
                         <!-- UI-18: only "yay" is ever selectable here, so any press on this picker
                              is effectively clicking it — in Demo/Simulated mode that's informational
                              only (see SettingsViewModel.NotifyIfSimulated). -->
@@ -58,8 +58,8 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                         <Button Classes="neutral" Command="{Binding DetectEngineCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <icons:DetectIcon Width="12" Height="12" Stroke="{DynamicResource Brush.TextMuted}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                <icons:DetectIcon Width="24" Height="24" Stroke="{DynamicResource Brush.TextMuted}"/>
                                 <TextBlock Text="{Binding DetectLabel}"/>
                             </StackPanel>
                         </Button>
@@ -73,16 +73,16 @@
                   reintroducing this UI later is a pure addition, not a data-model change.
                 -->
 
-                <StackPanel Spacing="14">
+                <StackPanel Spacing="28">
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="{Binding AutoUpdateLabel}" FontSize="26" Foreground="{DynamicResource Brush.Text}"/>
-                            <TextBlock Text="{Binding AutoUpdateHintLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,2,0,0"/>
+                            <TextBlock Text="{Binding AutoUpdateHintLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,4,0,0"/>
                         </StackPanel>
                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding AutoUpdateCheckEnabled}" VerticalAlignment="Center"/>
                     </Grid>
 
-                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AutoUpdateCheckEnabled}" Margin="0,-6,0,0">
+                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding AutoUpdateCheckEnabled}" Margin="0,-12,0,0">
                         <TextBlock Grid.Column="0" Text="{Binding UpdateScheduleTimeLabel}" FontSize="24" Foreground="{DynamicResource Brush.TextMuted}" VerticalAlignment="Center"/>
                         <TimePicker Grid.Column="1" SelectedTime="{Binding UpdateScheduleTimeOfDay}"/>
                     </Grid>
@@ -90,7 +90,7 @@
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="{Binding NotificationsLabel}" FontSize="26" Foreground="{DynamicResource Brush.Text}"/>
-                            <TextBlock Text="{Binding NotificationsHintLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,2,0,0"/>
+                            <TextBlock Text="{Binding NotificationsHintLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,4,0,0"/>
                         </StackPanel>
                         <ToggleSwitch Grid.Column="1" IsChecked="{Binding NotificationsEnabled}" VerticalAlignment="Center"/>
                     </Grid>

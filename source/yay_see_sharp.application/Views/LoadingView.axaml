@@ -9,12 +9,12 @@
              x:DataType="vm:LoadingViewModel"
              Background="{DynamicResource Brush.Background}">
 
-    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
-        <icons:LogoMark Size="60" HorizontalAlignment="Center"/>
-        <StackPanel HorizontalAlignment="Center" Spacing="10">
-            <TextBlock Text="Yay See Sharp" FontSize="30" FontWeight="Medium"
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="28">
+        <icons:LogoMark Size="120" HorizontalAlignment="Center"/>
+        <StackPanel HorizontalAlignment="Center" Spacing="16">
+            <TextBlock Text="Yay See Sharp" FontSize="34" FontWeight="Medium"
                        Foreground="{DynamicResource Brush.Text}" HorizontalAlignment="Center"/>
-            <ProgressBar Width="160" Height="3" IsIndeterminate="True"
+            <ProgressBar Width="320" Height="6" IsIndeterminate="True"
                          Background="{DynamicResource Brush.Divider}"
                          Foreground="{DynamicResource Brush.Accent}"/>
             <TextBlock Text="{Binding StatusLabel}" FontSize="24"

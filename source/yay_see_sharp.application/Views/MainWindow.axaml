@@ -9,7 +9,7 @@
         x:Class="yay_see_sharp.application.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/app-icon.ico"
-        Width="1080" Height="680" MinWidth="760" MinHeight="480"
+        Width="1280" Height="800" MinWidth="900" MinHeight="600"
         Background="{DynamicResource Brush.Background}"
         FontFamily="{DynamicResource Font.Default}"
         Title="Yay See Sharp">
@@ -19,15 +19,15 @@
     </Design.DataContext>
 
     <Panel>
-        <Grid ColumnDefinitions="140,*">
+        <Grid ColumnDefinitions="280,*">
 
             <!-- Sidebar -->
             <Grid Grid.Column="0" Background="{DynamicResource Brush.Sidebar}"
-                  RowDefinitions="Auto,*,Auto" Margin="10,16">
+                  RowDefinitions="Auto,*,Auto" Margin="20,32">
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8" Margin="2,0,0,12">
-                    <icons:LogoMark Size="24"/>
-                    <TextBlock Text="Yay See Sharp" FontSize="25" FontWeight="SemiBold"
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" Margin="4,0,0,24">
+                    <icons:LogoMark Size="48"/>
+                    <TextBlock Text="Yay See Sharp" FontSize="26" FontWeight="SemiBold"
                                Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
                 </StackPanel>
 
@@ -38,12 +38,12 @@
                          SelectionChanged="OnMainSidebarSelectionChanged">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:NavigationItemViewModel">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <icons:GridIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
-                                                 IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Dashboard}"/>
-                                <icons:SearchIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <icons:GridIcon Width="28" Height="28" Stroke="{Binding $parent[ListBoxItem].Foreground}"
+                                                IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Dashboard}"/>
+                                <icons:SearchIcon Width="28" Height="28" Stroke="{Binding $parent[ListBoxItem].Foreground}"
                                                    IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Search}"/>
-                                <icons:BoxIcon Width="14" Height="14" Stroke="{Binding $parent[ListBoxItem].Foreground}"
+                                <icons:BoxIcon Width="28" Height="28" Stroke="{Binding $parent[ListBoxItem].Foreground}"
                                                 IsVisible="{Binding Section, Converter={x:Static conv:EqualsConverter.Instance}, ConverterParameter=Installed}"/>
                                 <TextBlock Text="{Binding Title}" Foreground="{Binding $parent[ListBoxItem].Foreground}" VerticalAlignment="Center"/>
                             </StackPanel>
@@ -56,8 +56,8 @@
                      MainWindowViewModel's IsSettingsSelected doc comment for why). -->
                 <Button Grid.Row="2" Classes="navItem" Classes.selected="{Binding IsSettingsSelected}"
                         VerticalAlignment="Bottom" Command="{Binding SelectSettingsCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <icons:GearIcon Width="14" Height="14" Stroke="{Binding $parent[Button].Foreground}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <icons:GearIcon Width="28" Height="28" Stroke="{Binding $parent[Button].Foreground}"/>
                         <TextBlock Text="{Binding SettingsNavigationItem.Title}" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -69,7 +69,7 @@
                 <Border Grid.Row="0" IsVisible="{Binding HasWarning}"
                         Background="{DynamicResource Brush.AccentTint}"
                         BorderBrush="{DynamicResource Brush.Divider}" BorderThickness="0,0,0,1"
-                        Padding="20,8">
+                        Padding="40,16">
                     <TextBlock Text="{Binding WarningMessage}" FontSize="23"
                                Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
                 </Border>
@@ -91,23 +91,23 @@
         </Border>
 
         <!-- UI-22: in-app toast stack, bottom-right, auto-dismissing (UI-06) — see ToastService. -->
-        <ItemsControl ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20">
+        <ItemsControl ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="40">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
-                    <StackPanel Spacing="8" HorizontalAlignment="Right"/>
+                    <StackPanel Spacing="16" HorizontalAlignment="Right"/>
                 </ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:ToastViewModel">
-                    <Border Width="320" Background="{DynamicResource Brush.Surface}" CornerRadius="10"
+                    <Border Width="640" Background="{DynamicResource Brush.Surface}" CornerRadius="16"
                             BorderBrush="{Binding Level, Converter={x:Static conv:NotificationLevelBrushConverter.Instance}}"
-                            BorderThickness="1" Padding="14,12" BoxShadow="{DynamicResource Shadow.Lg}">
-                        <Grid ColumnDefinitions="4,*,Auto">
-                            <Border Grid.Column="0" CornerRadius="2" Margin="0,0,10,0"
+                            BorderThickness="2" Padding="28,24" BoxShadow="{DynamicResource Shadow.Lg}">
+                        <Grid ColumnDefinitions="8,*,Auto">
+                            <Border Grid.Column="0" CornerRadius="4" Margin="0,0,20,0"
                                     Background="{Binding Level, Converter={x:Static conv:NotificationLevelBrushConverter.Instance}}"/>
-                            <StackPanel Grid.Column="1" Spacing="2">
-                                <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}" TextWrapping="Wrap"/>
-                                <TextBlock Text="{Binding Body}" FontSize="22" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="{Binding Title}" FontSize="26" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Body}" FontSize="24" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
                             </StackPanel>
                             <Button Grid.Column="2" Classes="subtle" Content="×" Command="{Binding DismissCommand}" VerticalAlignment="Top"/>
                         </Grid>

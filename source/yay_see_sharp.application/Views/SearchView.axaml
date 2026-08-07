@@ -13,7 +13,7 @@
 
     <DockPanel>
 
-        <StackPanel DockPanel.Dock="Top" Margin="20,16,20,10" Spacing="10">
+        <StackPanel DockPanel.Dock="Top" Margin="40,32,40,20" Spacing="20">
 
             <!-- UI-07: filter toggle buttons above the search bar; live search below, no button. -->
             <ListBox Theme="{StaticResource SegmentedListBox}"
@@ -28,10 +28,10 @@
             </ListBox>
 
             <Border Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Divider}"
-                    BorderThickness="1" CornerRadius="8" Padding="12,8">
+                    BorderThickness="1" CornerRadius="12" Padding="24,16">
                 <Grid ColumnDefinitions="Auto,*">
-                    <icons:SearchIcon Grid.Column="0" Width="15" Height="15" Margin="0,0,8,0"
-                                       Stroke="{DynamicResource Brush.TextFaint}"/>
+                    <icons:SearchIcon Grid.Column="0" Width="30" Height="30" Margin="0,0,16,0"
+                                      Stroke="{DynamicResource Brush.TextFaint}"/>
                     <TextBox Grid.Column="1" Text="{Binding Query}" PlaceholderText="{Binding PlaceholderLabel}"
                              Background="Transparent" BorderThickness="0" Padding="0"/>
                 </Grid>
@@ -41,15 +41,15 @@
                        Foreground="{DynamicResource Brush.Destructive}" FontSize="24" TextWrapping="Wrap"/>
         </StackPanel>
 
-        <TextBlock DockPanel.Dock="Top" Margin="20,4" Text="{Binding NoResultsLabel}" IsVisible="{Binding HasNoResults}"
+        <TextBlock DockPanel.Dock="Top" Margin="40,8" Text="{Binding NoResultsLabel}" IsVisible="{Binding HasNoResults}"
                    FontSize="25" Foreground="{DynamicResource Brush.TextFaint}"/>
 
         <Grid DockPanel.Dock="Top" ColumnDefinitions="2*,3*">
-            <ScrollViewer Grid.Column="0" Margin="20,0,10,16">
+            <ScrollViewer Grid.Column="0" Margin="40,0,20,32">
                 <ItemsControl ItemsSource="{Binding Results}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Spacing="8"/>
+                            <StackPanel Spacing="12"/>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -57,23 +57,23 @@
                             <!-- UI-09: the row itself navigates to the detail pane; Install stays as an
                                  independent shortcut — Avalonia's routed pointer events mean clicking the
                                  nested Install button does not also trigger the row's own click. -->
-                            <Button Classes="row" Padding="11"
+                            <Button Classes="row" Padding="20,18"
                                     Command="{Binding $parent[UserControl].DataContext.SelectPackageCommand}"
                                     CommandParameter="{Binding}">
-                                <Grid ColumnDefinitions="32,*,Auto">
-                                    <Border Grid.Column="0" Width="32" Height="32" CornerRadius="7" VerticalAlignment="Top"
-                                            Margin="0,0,10,0" Background="{DynamicResource Brush.AccentTint}">
+                                <Grid ColumnDefinitions="64,*,Auto">
+                                    <Border Grid.Column="0" Width="64" Height="64" CornerRadius="14" VerticalAlignment="Top"
+                                            Margin="0,0,20,0" Background="{DynamicResource Brush.AccentTint}">
                                         <TextBlock Text="{Binding Name, Converter={x:Static conv:InitialsConverter.Instance}}"
-                                                   FontFamily="{DynamicResource Font.Monospace}" FontWeight="SemiBold" FontSize="22"
+                                                   FontFamily="{DynamicResource Font.Monospace}" FontWeight="SemiBold" FontSize="30"
                                                    Foreground="{DynamicResource Brush.Accent}"
                                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                     </Border>
-                                    <StackPanel Grid.Column="1" Spacing="3" Margin="0,0,10,0">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,20,0">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
                                             <TextBlock Text="{Binding Name}" FontSize="27" Foreground="{DynamicResource Brush.Text}"/>
                                             <Border Theme="{StaticResource TagNeutral}">
                                                 <TextBlock Text="{Binding Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"
-                                                           FontSize="19" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
+                                                           FontSize="24" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Description}" FontSize="23" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
@@ -85,9 +85,9 @@
                                     <Border Grid.Column="2" Theme="{StaticResource TagAccent}" VerticalAlignment="Center"
                                             IsVisible="{Binding State, Converter={x:Static conv:PackageStateIsInstalledConverter.Instance}}">
                                         <TextBlock Text="{Binding $parent[UserControl].DataContext.InstalledLabel}"
-                                                   FontSize="21" Foreground="{DynamicResource Brush.TagAccentFg}"/>
+                                                   FontSize="24" Foreground="{DynamicResource Brush.TagAccentFg}"/>
                                     </Border>
-                                    <Button Grid.Column="2" VerticalAlignment="Center" FontSize="23" Padding="10,5"
+                                    <Button Grid.Column="2" VerticalAlignment="Center" FontSize="25" Padding="20,10"
                                             Content="{Binding $parent[UserControl].DataContext.InstallLabel}"
                                             IsVisible="{Binding State, Converter={x:Static conv:PackageStateIsInstalledConverter.Instance}, ConverterParameter=invert}"
                                             Command="{Binding $parent[UserControl].DataContext.InstallCommand}"
@@ -99,7 +99,7 @@
                 </ItemsControl>
             </ScrollViewer>
 
-            <ContentControl Grid.Column="1" Margin="0,0,20,16" Content="{Binding SelectedDetails}"/>
+            <ContentControl Grid.Column="1" Margin="0,0,40,32" Content="{Binding SelectedDetails}"/>
         </Grid>
 
     </DockPanel>

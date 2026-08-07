@@ -16,7 +16,7 @@
 
             <!-- Always visible, not conditional — real systems can have thousands of installed
                  packages, so filter + search are needed even before the list feels "long". -->
-            <StackPanel DockPanel.Dock="Top" Margin="20,16,20,10" Spacing="10">
+            <StackPanel DockPanel.Dock="Top" Margin="40,32,40,20" Spacing="20">
                 <ListBox Theme="{StaticResource SegmentedListBox}"
                          ItemsSource="{Binding SourceOptions}"
                          SelectedItem="{Binding SelectedSourceOption}"
@@ -29,32 +29,32 @@
                 </ListBox>
 
                 <Border Background="{DynamicResource Brush.Sidebar}" BorderBrush="{DynamicResource Brush.Divider}"
-                        BorderThickness="1" CornerRadius="8" Padding="12,8">
+                        BorderThickness="1" CornerRadius="12" Padding="24,16">
                     <Grid ColumnDefinitions="Auto,*">
-                        <icons:SearchIcon Grid.Column="0" Width="15" Height="15" Margin="0,0,8,0"
-                                           Stroke="{DynamicResource Brush.TextFaint}"/>
+                        <icons:SearchIcon Grid.Column="0" Width="30" Height="30" Margin="0,0,16,0"
+                                          Stroke="{DynamicResource Brush.TextFaint}"/>
                         <TextBox Grid.Column="1" Text="{Binding Query}" PlaceholderText="{Binding PlaceholderLabel}"
                                  Background="Transparent" BorderThickness="0" Padding="0"/>
                     </Grid>
                 </Border>
             </StackPanel>
 
-            <TextBlock DockPanel.Dock="Top" Margin="20,0,20,10" Text="{Binding EmptyLabel}" IsVisible="{Binding HasNoPackages}"
+            <TextBlock DockPanel.Dock="Top" Margin="40,0,40,20" Text="{Binding EmptyLabel}" IsVisible="{Binding HasNoPackages}"
                        FontSize="25" Foreground="{DynamicResource Brush.TextFaint}"/>
 
-            <TextBlock DockPanel.Dock="Top" Margin="20,0,20,10" Text="{Binding NoResultsLabel}" IsVisible="{Binding HasNoFilteredResults}"
+            <TextBlock DockPanel.Dock="Top" Margin="40,0,40,20" Text="{Binding NoResultsLabel}" IsVisible="{Binding HasNoFilteredResults}"
                        FontSize="25" Foreground="{DynamicResource Brush.TextFaint}"/>
 
-            <TextBlock DockPanel.Dock="Top" Margin="20,0" Text="{Binding ErrorMessage}"
+            <TextBlock DockPanel.Dock="Top" Margin="40,0" Text="{Binding ErrorMessage}"
                        IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
                        Foreground="{DynamicResource Brush.Destructive}" FontSize="24" TextWrapping="Wrap"/>
 
             <Grid DockPanel.Dock="Top" ColumnDefinitions="2*,3*">
-                <ScrollViewer Grid.Column="0" Margin="20,0,10,16">
+                <ScrollViewer Grid.Column="0" Margin="40,0,20,32">
                     <ListBox Classes="plain" ItemsSource="{Binding FilteredPackages}" SelectedItem="{Binding SelectedPackage}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="models:PackageSummary" x:CompileBindings="False">
-                                <Border Background="{DynamicResource Brush.RowFill}" CornerRadius="8" Padding="10,9">
+                                <Border Background="{DynamicResource Brush.RowFill}" CornerRadius="12" Padding="20,18">
                                     <Grid ColumnDefinitions="*,64,52,44">
                                         <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="26"
                                                    Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
@@ -64,7 +64,7 @@
                                                    FontSize="22" Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center"/>
                                         <Border Grid.Column="3" Theme="{StaticResource TagNeutral}" HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"
-                                                       FontSize="19" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
+                                                       FontSize="24" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
                                         </Border>
                                     </Grid>
                                 </Border>
@@ -73,7 +73,7 @@
                     </ListBox>
                 </ScrollViewer>
 
-                <ContentControl Grid.Column="1" Margin="0,0,20,16" Content="{Binding SelectedDetails}"/>
+                <ContentControl Grid.Column="1" Margin="0,0,40,32" Content="{Binding SelectedDetails}"/>
             </Grid>
 
         </DockPanel>
@@ -82,15 +82,15 @@
         <Border IsVisible="{Binding BuildJob, Converter={x:Static ObjectConverters.IsNotNull}}"
                 Background="{DynamicResource Brush.ScrimBackdrop}">
             <Border IsVisible="{Binding !BuildJob.IsMinimized, FallbackValue=False}"
-                    Width="380" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Background="{DynamicResource Brush.Surface}" CornerRadius="14" Padding="20">
-                <StackPanel Spacing="12">
+                    Width="760" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Background="{DynamicResource Brush.Surface}" CornerRadius="20" Padding="40">
+                <StackPanel Spacing="24">
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0" Text="{Binding BuildJob.TitleLabel}" FontSize="30" FontWeight="Medium"
                                    Foreground="{DynamicResource Brush.Text}"/>
                         <Button Grid.Column="1" Classes="subtle" Content="×" Command="{Binding BuildJob.MinimizeCommand}"/>
                     </Grid>
-                    <Border Background="{DynamicResource Brush.Background}" CornerRadius="8" Padding="10" Height="120">
+                    <Border Background="{DynamicResource Brush.Background}" CornerRadius="12" Padding="20" Height="240">
                         <ScrollViewer>
                             <ItemsControl ItemsSource="{Binding BuildJob.LogLines}">
                                 <ItemsControl.ItemTemplate>
@@ -102,7 +102,7 @@
                             </ItemsControl>
                         </ScrollViewer>
                     </Border>
-                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding BuildJob.Operation.Percent}" Height="4"
+                    <ProgressBar Minimum="0" Maximum="100" Value="{Binding BuildJob.Operation.Percent}" Height="8"
                                  Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"/>
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock Grid.Column="0" Text="{Binding BuildJob.Operation.StageLabel}" FontSize="23"
@@ -116,12 +116,12 @@
 
         <!-- Minimized: small reopenable chip pinned to the corner instead of a full modal. -->
         <Border IsVisible="{Binding BuildJob.IsMinimized, FallbackValue=False}"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="20"
-                Background="{DynamicResource Brush.Surface}" CornerRadius="8" Padding="12,8" Cursor="Hand">
+                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="40"
+                Background="{DynamicResource Brush.Surface}" CornerRadius="12" Padding="24,16" Cursor="Hand">
             <Border.IsHitTestVisible>True</Border.IsHitTestVisible>
-            <StackPanel Orientation="Horizontal" Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="16">
                 <TextBlock Text="{Binding BuildJob.TitleLabel}" FontSize="24" Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
-                <Button Classes="neutral" Content="⤢" Padding="6,3" Command="{Binding BuildJob.RestoreCommand}"/>
+                <Button Classes="neutral" Content="⤢" Padding="12,6" Command="{Binding BuildJob.RestoreCommand}"/>
             </StackPanel>
         </Border>
 
