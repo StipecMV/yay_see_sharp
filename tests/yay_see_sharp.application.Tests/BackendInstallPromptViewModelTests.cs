@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Reactive;
 using System.Reactive.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Localization;
@@ -100,8 +102,11 @@ public class BackendInstallPromptViewModelTests
 
         await Assert.That(viewModel.Operation!.Stage).IsEqualTo(PackageOperationStage.Failed);
         await Assert.That(viewModel.Operation!.IsRunning).IsFalse();
-        await Assert.That(await viewModel.CloseCommand.CanExecute.FirstAsync()).IsTrue();
-        await Assert.That(await viewModel.ConfirmCommand.CanExecute.FirstAsync()).IsTrue();
+        // BUGFIX 2026-08: the CanExecute updates arrive asynchronously (ReactiveCommand pipes
+        // them through its own scheduler), so poll instead of asserting the very first value —
+        // this test used to flake under parallel test execution.
+        await WaitUntilCanExecuteAsync(viewModel.CloseCommand, expected: true);
+        await WaitUntilCanExecuteAsync(viewModel.ConfirmCommand, expected: true);
     }
 
     [Test]
@@ -115,8 +120,8 @@ public class BackendInstallPromptViewModelTests
         await Assert.That(viewModel.Operation!.Stage).IsEqualTo(PackageOperationStage.Failed);
         await Assert.That(viewModel.Operation!.Message).Contains("disk full");
         await Assert.That(viewModel.Operation!.IsRunning).IsFalse();
-        await Assert.That(await viewModel.CloseCommand.CanExecute.FirstAsync()).IsTrue();
-        await Assert.That(await viewModel.ConfirmCommand.CanExecute.FirstAsync()).IsTrue();
+        await WaitUntilCanExecuteAsync(viewModel.CloseCommand, expected: true);
+        await WaitUntilCanExecuteAsync(viewModel.ConfirmCommand, expected: true);
     }
 
     [Test]
@@ -176,5 +181,21 @@ public class BackendInstallPromptViewModelTests
         await WaitUntilAsync(() => viewModel.Operation is { IsRunning: false }, TimeSpan.FromSeconds(2));
 
         await Assert.That(viewModel.Operation!.Stage).IsEqualTo(PackageOperationStage.Cancelled);
+    }
+
+    private static async Task WaitUntilCanExecuteAsync(ReactiveCommand<Unit, Unit> command, bool expected)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(2);
+        while (DateTime.UtcNow < deadline)
+        {
+            if (await command.CanExecute.FirstAsync() == expected)
+            {
+                return;
+            }
+
+            await Task.Delay(10);
+        }
+
+        throw new TimeoutException($"CanExecute did not become {expected} within the timeout.");
     }
 }

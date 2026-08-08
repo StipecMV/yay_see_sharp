@@ -123,6 +123,11 @@ public class SettingsViewModelTests
         await Assert.That(hideToTray.Label).IsEqualTo("Hide to tray");
         var englishOption = viewModel.LanguageOptions.Single(option => option.Value == "en");
         await Assert.That(englishOption.Label).IsEqualTo("English");
+        // BUGFIX/feature 2026-08: German and Polish are selectable languages too.
+        var germanOption = viewModel.LanguageOptions.Single(option => option.Value == "de");
+        await Assert.That(germanOption.Label).IsEqualTo("German");
+        var polishOption = viewModel.LanguageOptions.Single(option => option.Value == "pl");
+        await Assert.That(polishOption.Label).IsEqualTo("Polish");
 
         localization.SetLanguage("sk");
 
@@ -130,6 +135,20 @@ public class SettingsViewModelTests
         await Assert.That(systemThemeSk.Label).IsEqualTo("Systémová");
         var hideToTraySk = viewModel.CloseActionOptions.Single(option => option.Value == CloseAction.HideToTray);
         await Assert.That(hideToTraySk.Label).IsEqualTo("Skryť do systémovej lišty");
+        await Assert.That(germanOption.Label).IsEqualTo("Nemčina");
+        await Assert.That(polishOption.Label).IsEqualTo("Poľština");
+
+        localization.SetLanguage("de");
+
+        await Assert.That(englishOption.Label).IsEqualTo("Englisch");
+        await Assert.That(germanOption.Label).IsEqualTo("Deutsch");
+        await Assert.That(polishOption.Label).IsEqualTo("Polnisch");
+
+        localization.SetLanguage("pl");
+
+        await Assert.That(englishOption.Label).IsEqualTo("Angielski");
+        await Assert.That(germanOption.Label).IsEqualTo("Niemiecki");
+        await Assert.That(polishOption.Label).IsEqualTo("Polski");
     }
     [Test]
     public async Task Language_switch_updates_labels_in_place_without_replacing_option_instances()
