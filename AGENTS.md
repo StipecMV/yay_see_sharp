@@ -31,7 +31,7 @@ YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1 dotnet run --project tests/yay_see_sh
 ./tools/generate-screenshots.sh [--theme dark] [--lang sk]
 ```
 
-**Aktuálny stav (2026-08):** 277/277 testov zelených — 7 domain + 154 infrastructure + 104 application + 12 e2e.
+**Aktuálny stav (2026-08):** 284/284 testov zelených — 7 domain + 161 infrastructure + 104 application + 12 e2e.
 **Screenshoty** sa generujú z reálne skompilovanej aplikácie (Demo backend), nie ručne.
 
 ## 3. Architektúra (striktne jednosmerné závislosti)
@@ -47,13 +47,14 @@ yay_see_sharp.domain       (modely + interfacy — ŽIADNE third-party závislos
 - **UI NIKDY nespúšťa `yay`/`pacman`/`apt` priamo** — každá operácia ide cez `IPackageBackend` (rovnaké ViewModely jazdia Real aj Demo backend).
 - **Real mode:** Arch/CachyOS s `yay` → `YayPackageBackend` (cez `ICommandRunner`, nikdy shell string).
 - **Demo mode:** všetko ostatné → `DemoPackageBackend` (realistická in-memory simulácia, nikdy nesiahne na hostiteľa). Detekcia cez `/etc/os-release`.
-- **Lokalizácia:** dictionary `Resources/LocalizationResources.cs` (EN/SK/DE/PL), **nie `.resx`** — live prepínanie jazyka cez `LocalizedViewModelBase`. Dynamický obsah z backendu (názvy balíkov) sa neprekladá.
+- **Lokalizácia:** dictionary `Resources/LocalizationResources.cs` (11 jazykov: EN/SK/DE/PL/RU/ES/PT/IT/zh-CN/zh-TW/JA), **nie `.resx`** — live prepínanie jazyka cez `LocalizedViewModelBase`. Dynamický obsah z backendu (názvy balíkov) sa neprekladá.
 - Kľúčové interfacy: `IPackageBackend`, `ICommandRunner`, `IDistributionDetector`, `IPrivilegeService`, `ISettingsStore`, `ILocalizationService`, `INotificationService`, `ITrayService`, `ISingleInstanceService`, `IClock`.
 
 ## 4. Čo sme riešili (história)
 
 - **2026-08 bugfix runda** (`0b24a06`) — 13 problémov z testovania Real mode na živom CachyOS: falošný „Saved" toast pri otvorení Settings, 30s→10s toast, Detect hlásil „Saved" namiesto výsledku, vertikálne filtre, stratený filter v Installed, orezané texty po zdvojnásobení fontu, nespoľahlivý `[installed]` marker z yay (fix: krížová kontrola `pacman -Qq`), PKGBUILD modal mimo okna, pomalé prepínanie filtrov (fix: okamžité vyčistenie + spinner), chýbajúca selekcia v Search, dvojité popupy pri chybe (fix: OS notifikácie OFF default), htop z Search neviditeľný v Installed (fix: refresh pri navigácii), zlý AUR count + „Updates available" (fix: chunked `yay -Si` ≤20 mien ≤4 concurrent). Detaily: `docs/bugfixes-2026-08.md`.
 - **Lokalizácia DE/PL** — pridané nemecké (de) a poľské (pl) jazykové sady (126 kľúčov každá, plná parita); jazyk sa prepína v Settings ako EN/SK. Testy: `LocalizationServiceTests` (de/pl/fallback), `SettingsViewModelTests` (možnosti jazyka).
+- **Lokalizácia RU/ES/PT/IT/zh-CN/zh-TW/JA** — pridaných 7 jazykových sád (133 kľúčov každá, plná parita generovaná + overená); spolu 11 jazykov. Testy: `LocalizationServiceTests` (7 nových setov), `SettingsViewModelTests` (11 možností jazyka).
 - **Code review findings** (52beea1) — findings z review zapracované; dokument `docs/code-review-findings.md` bol po zapracovaní **odstránený** (ed2ee29), aktuálne žiadny takýto súbor neudržiavaj.
 - **Packaging guide** — `docs/aur-packaging-guide.md` (PKGBUILD runbook, framework-dependent build s `dotnet-runtime` v `depends`); **balík do AUR ešte nebol odoslaný**.
 - **Self-hosted CI runner** — `docs/setup-self-hosted-runner.md`.
@@ -94,13 +95,14 @@ yay_see_sharp.domain       (modely + interfacy — ŽIADNE third-party závislos
 2. **Scoped zmeny:** drž zmenu v jednej architektonickej vrstve, kde sa dá; testy pridávaj do zodpovedajúceho test projektu (domain→domain.Tests, atď.).
 3. **Po zmene:** `dotnet build yay_see_sharp.slnx` (0 chýb) + spustiť aspoň dotknuté test projekty. Pri UI zmenách regenerovať screenshoty.
 4. **Real mode veci** (tray, OS notifikácie, sudo dialog, reálne yay operácie) sa v CI/testoch **nedajú overiť** — označ ich ako vyžadujúce manuálne overenie na Arch/CachyOS, netvár sa že sú overené.
-5. **Jazyk UI:** EN + SK + DE + PL (4 jazykové sady); nové reťazce pridávaj do VŠETKÝCH štyroch sád (parita kľúčov je testovaná).
+5. **Jazyk UI:** 11 jazykových sád (EN, SK, DE, PL, RU, ES, PT, IT, zh-CN, zh-TW, JA); nové reťazce pridávaj do VŠETKÝCH sád (parita kľúčov je testovaná).
 6. Commit message štýl: krátke popisné (`fix: ...`, `feat: ...`); commity priamo na `main`.
 7. **Rozhodnutia** o zmene správania (schválené/zamietnuté) sa zaznamenávajú do tohto súboru (sekcie 5/6) a do Hindsight (todo board „Yay See Sharp projekt").
 
 ## 8. Známé muchy a pitfalls
 
 - `dotnet test` nefunguje spoľahlivo pre TUnit projekty — vždy `dotnet run --project`.
+- `dotnet run --project ... --no-build` môže bežať zo STALE binárok v `output/bin/` (starý layout) namiesto `output/bin/Debug/` — ak výsledky nezodpovedajú zdrojáku, spusti testy BEZ `--no-build`.
 - Filter bugy: sleduj `SelectedSourceOption` (notifikuje), NIE `SourceFilter` (nikdy nevyhodí PropertyChanged).
 - `pacman -Qq` je rýchly lokálny zdroj stavu „installed" — používa sa na krížovú kontrolu.
 - AUR potvrdenia (`yay -Si`) chunkuj (≤20 mien, ≤4 concurrent) — jeden neriešiteľný názov zhodí celé volanie.

@@ -128,6 +128,22 @@ public class SettingsViewModelTests
         await Assert.That(germanOption.Label).IsEqualTo("German");
         var polishOption = viewModel.LanguageOptions.Single(option => option.Value == "pl");
         await Assert.That(polishOption.Label).IsEqualTo("Polish");
+        // Feature 2026-08: all eleven languages are offered in the picker.
+        var russianOption = viewModel.LanguageOptions.Single(option => option.Value == "ru");
+        await Assert.That(russianOption.Label).IsEqualTo("Russian");
+        var spanishOption = viewModel.LanguageOptions.Single(option => option.Value == "es");
+        await Assert.That(spanishOption.Label).IsEqualTo("Spanish");
+        var portugueseOption = viewModel.LanguageOptions.Single(option => option.Value == "pt");
+        await Assert.That(portugueseOption.Label).IsEqualTo("Portuguese");
+        var italianOption = viewModel.LanguageOptions.Single(option => option.Value == "it");
+        await Assert.That(italianOption.Label).IsEqualTo("Italian");
+        var zhCnOption = viewModel.LanguageOptions.Single(option => option.Value == "zh-cn");
+        await Assert.That(zhCnOption.Label).IsEqualTo("Chinese (Simplified)");
+        var zhTwOption = viewModel.LanguageOptions.Single(option => option.Value == "zh-tw");
+        await Assert.That(zhTwOption.Label).IsEqualTo("Chinese (Traditional)");
+        var japaneseOption = viewModel.LanguageOptions.Single(option => option.Value == "ja");
+        await Assert.That(japaneseOption.Label).IsEqualTo("Japanese");
+        await Assert.That(viewModel.LanguageOptions).HasCount().EqualTo(11);
 
         localization.SetLanguage("sk");
 
@@ -149,6 +165,14 @@ public class SettingsViewModelTests
         await Assert.That(englishOption.Label).IsEqualTo("Angielski");
         await Assert.That(germanOption.Label).IsEqualTo("Niemiecki");
         await Assert.That(polishOption.Label).IsEqualTo("Polski");
+
+        localization.SetLanguage("ja");
+
+        await Assert.That(englishOption.Label).IsEqualTo("英語");
+        await Assert.That(japaneseOption.Label).IsEqualTo("日本語");
+        await Assert.That(russianOption.Label).IsEqualTo("ロシア語");
+        await Assert.That(zhCnOption.Label).IsEqualTo("簡体字中国語");
+        await Assert.That(zhTwOption.Label).IsEqualTo("繁体字中国語");
     }
     [Test]
     public async Task Language_switch_updates_labels_in_place_without_replacing_option_instances()

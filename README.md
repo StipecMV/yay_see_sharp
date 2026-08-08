@@ -34,7 +34,7 @@ A fast, minimal desktop GUI for the [`yay`](https://github.com/Jguer/yay) AUR he
 - **Scheduled background update checks** with in-app notifications (OS-level notifications are opt-in via Settings — off by default, so one event never produces two popups)
 - **In-app PKGBUILD viewer** — fetched straight from the AUR, no browser round-trip
 - **Orphan cleanup** on uninstall, configurable as a default
-- **Live English / Slovenčina / Deutsch / Polski localization** — switch languages without restarting
+- **Live localization in 11 languages** — English, Slovenčina, Deutsch, Polski, Русский, Español, Português, Italiano, 简体中文, 繁體中文 and 日本語; switch languages without restarting
 - **System tray** integration — icon visible from startup, minimize-to-tray and close-to-tray
 - **In-app toast notifications** for install/uninstall/update results and errors, auto-dismissing after 10s
 - Secure privilege elevation via `sudo`, with the password never touching argv, logs, or disk

@@ -52,7 +52,7 @@ public class LocalizationServiceTests
     }
 
     [Test]
-    public async Task Available_languages_include_all_four_supported_languages()
+    public async Task Available_languages_include_all_supported_languages()
     {
         var service = new LocalizationService("en");
 
@@ -60,6 +60,104 @@ public class LocalizationServiceTests
         await Assert.That(service.AvailableLanguages).Contains("sk");
         await Assert.That(service.AvailableLanguages).Contains("de");
         await Assert.That(service.AvailableLanguages).Contains("pl");
+        await Assert.That(service.AvailableLanguages).Contains("ru");
+        await Assert.That(service.AvailableLanguages).Contains("es");
+        await Assert.That(service.AvailableLanguages).Contains("pt");
+        await Assert.That(service.AvailableLanguages).Contains("it");
+        await Assert.That(service.AvailableLanguages).Contains("zh-cn");
+        await Assert.That(service.AvailableLanguages).Contains("zh-tw");
+        await Assert.That(service.AvailableLanguages).Contains("ja");
+    }
+
+    [Test]
+    public async Task SetLanguage_to_russian_switches_translated_strings()
+    {
+        var service = new LocalizationService("en");
+
+        service.SetLanguage("ru");
+
+        await Assert.That(service.Language).IsEqualTo("ru");
+        await Assert.That(service.GetString("Navigation.Dashboard")).IsEqualTo("Обзор");
+        await Assert.That(service.GetString("Package.Install")).IsEqualTo("Установить");
+        await Assert.That(service.GetString("Settings.Language.Ru")).IsEqualTo("Русский");
+    }
+
+    [Test]
+    public async Task SetLanguage_to_spanish_switches_translated_strings()
+    {
+        var service = new LocalizationService("en");
+
+        service.SetLanguage("es");
+
+        await Assert.That(service.Language).IsEqualTo("es");
+        await Assert.That(service.GetString("Navigation.Dashboard")).IsEqualTo("Panel");
+        await Assert.That(service.GetString("Package.Install")).IsEqualTo("Instalar");
+        await Assert.That(service.GetString("Settings.Language.Es")).IsEqualTo("Español");
+    }
+
+    [Test]
+    public async Task SetLanguage_to_portuguese_switches_translated_strings()
+    {
+        var service = new LocalizationService("en");
+
+        service.SetLanguage("pt");
+
+        await Assert.That(service.Language).IsEqualTo("pt");
+        await Assert.That(service.GetString("Navigation.Dashboard")).IsEqualTo("Painel");
+        await Assert.That(service.GetString("Package.Install")).IsEqualTo("Instalar");
+        await Assert.That(service.GetString("Settings.Language.Pt")).IsEqualTo("Português");
+    }
+
+    [Test]
+    public async Task SetLanguage_to_italian_switches_translated_strings()
+    {
+        var service = new LocalizationService("en");
+
+        service.SetLanguage("it");
+
+        await Assert.That(service.Language).IsEqualTo("it");
+        await Assert.That(service.GetString("Navigation.Dashboard")).IsEqualTo("Pannello");
+        await Assert.That(service.GetString("Package.Install")).IsEqualTo("Installa");
+        await Assert.That(service.GetString("Settings.Language.It")).IsEqualTo("Italiano");
+    }
+
+    [Test]
+    public async Task SetLanguage_to_simplified_chinese_switches_translated_strings()
+    {
+        var service = new LocalizationService("en");
+
+        service.SetLanguage("zh-CN");
+
+        await Assert.That(service.Language).IsEqualTo("zh-cn");
+        await Assert.That(service.GetString("Navigation.Dashboard")).IsEqualTo("概览");
+        await Assert.That(service.GetString("Package.Install")).IsEqualTo("安装");
+        await Assert.That(service.GetString("Settings.Language.Zh-cn")).IsEqualTo("简体中文");
+    }
+
+    [Test]
+    public async Task SetLanguage_to_traditional_chinese_switches_translated_strings()
+    {
+        var service = new LocalizationService("en");
+
+        service.SetLanguage("zh-TW");
+
+        await Assert.That(service.Language).IsEqualTo("zh-tw");
+        await Assert.That(service.GetString("Navigation.Dashboard")).IsEqualTo("總覽");
+        await Assert.That(service.GetString("Package.Install")).IsEqualTo("安裝");
+        await Assert.That(service.GetString("Settings.Language.Zh-tw")).IsEqualTo("繁體中文");
+    }
+
+    [Test]
+    public async Task SetLanguage_to_japanese_switches_translated_strings()
+    {
+        var service = new LocalizationService("en");
+
+        service.SetLanguage("ja");
+
+        await Assert.That(service.Language).IsEqualTo("ja");
+        await Assert.That(service.GetString("Navigation.Dashboard")).IsEqualTo("ダッシュボード");
+        await Assert.That(service.GetString("Package.Install")).IsEqualTo("インストール");
+        await Assert.That(service.GetString("Settings.Language.Ja")).IsEqualTo("日本語");
     }
 
     [Test]

@@ -46,7 +46,7 @@
 
 - Avalonia UI with MVVM.
 - Dashboard is the startup screen.
-- English, Slovak, German and Polish are supported.
+- English, Slovak, German, Polish, Russian, Spanish, Portuguese, Italian, Chinese (Simplified and Traditional) and Japanese are supported.
 - Language is selected from the system locale; unsupported locales fall back to English.
 - Localization resources are externalized so additional languages can be added without changing application logic.
 - System light/dark theme is followed automatically.
