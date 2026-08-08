@@ -166,4 +166,37 @@ public class DashboardViewModelTests
 
         await Assert.That(viewModel.LastSyncedLabel).IsEqualTo("Last synced moments ago");
     }
+
+    // BUGFIX-2026-08: the "Updates available" card must mirror the update list actually rendered
+    // below it. GetStatisticsAsync counts `pacman -Qu` (repo-only); the list comes from `yay -Qu`
+    // (repo + AUR). The dashboard overrides the statistic with the list's own count.
+    [Test]
+    public async Task Updates_available_statistic_matches_the_rendered_update_list()
+    {
+        var backend = new Mock<IPackageBackend>();
+        backend.Setup(b => b.GetStatisticsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PackageStatistics(
+                InstalledCount: 130,
+                ExplicitCount: 130,
+                DependencyCount: 0,
+                AurCount: 20,
+                UpdatesAvailable: 0, // pacman -Qu says none — but yay -Qu below finds three
+                InstalledSizeBytes: 0,
+                OrphanCount: 0,
+                LastUpdateCheck: DateTimeOffset.UtcNow));
+        backend.Setup(b => b.GetUpdatesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[]
+            {
+                new UpdateInfo("firefox", "137.0.2-1", "137.0.3-1", PackageSource.Official, 0),
+                new UpdateInfo("vlc", "3.0.20-1", "3.0.21-1", PackageSource.Official, 0),
+                new UpdateInfo("hello-git", "1.0-1", "1.1-1", PackageSource.Aur, 0),
+            });
+
+        var viewModel = new DashboardViewModel(backend.Object, new LocalizationService("en"));
+        await viewModel.InitialLoadTask;
+
+        await Assert.That(viewModel.Statistics).IsNotNull();
+        await Assert.That(viewModel.Statistics!.UpdatesAvailable).IsEqualTo(3);
+        await Assert.That(viewModel.Updates.Count).IsEqualTo(3);
+    }
 }

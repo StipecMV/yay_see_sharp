@@ -66,15 +66,51 @@ public sealed class PacmanQueryService : IPacmanQueryService
         // against just the foreign (not-in-any-configured-repo) names tells us which of them yay
         // can actually resolve against AUR — that's the confirmation. Any name yay can't resolve
         // stays classified as Foreign rather than being assumed to be AUR.
-        var arguments = new List<string> { "-Si", "--" };
-        arguments.AddRange(foreignPackageNames);
-        var result = await _commandRunner.RunAsync(
-            new CommandRequest("yay", arguments),
-            cancellationToken: cancellationToken);
+        //
+        // BUGFIX-2026-08: one giant `yay -Si <all foreign names>` call is fragile — a single
+        // unresolvable name can fail the whole query (and previously the entire AUR count
+        // degraded to 0/"unknown"). Query in bounded chunks instead, merge whatever each chunk
+        // confirmed, and let a chunk failure degrade only that chunk: 0 confirmed from a failed
+        // chunk is still an honest "not confirmed", while the rest of the system keeps its data.
+        const int chunkSize = 20;
+        const int maxConcurrency = 4;
+        var chunks = foreignPackageNames
+            .Chunk(chunkSize)
+            .Select(chunk => (IReadOnlyList<string>)chunk)
+            .ToArray();
 
-        return result.Succeeded
-            ? _outputParser.ParseAurConfirmedNames(result.CombinedText)
-            : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using var gate = new SemaphoreSlim(maxConcurrency);
+        var results = await Task.WhenAll(chunks.Select(async chunk =>
+        {
+            await gate.WaitAsync(cancellationToken);
+            try
+            {
+                return await _commandRunner.RunAsync(
+                    new CommandRequest("yay", ["-Si", "--", .. chunk]),
+                    cancellationToken: cancellationToken);
+            }
+            finally
+            {
+                gate.Release();
+            }
+        }));
+
+        var confirmed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var result in results)
+        {
+            if (result.Succeeded)
+            {
+                // Defensive: parser implementations (or mocks) may return null instead of an
+                // empty set — never crash the whole AUR count over a missing confirmation list.
+                var parsed = _outputParser.ParseAurConfirmedNames(result.CombinedText);
+                if (parsed is not null)
+                {
+                    confirmed.UnionWith(parsed);
+                }
+            }
+        }
+
+        return confirmed;
     }
 
     /// <summary>Null when the underlying `pacman -Qm` query itself failed (unknown, not zero); a confirmation query failure is not fatal — it degrades to 0 confirmed rather than unknown, since "no AUR packages confirmed" is still a valid, honest answer.</summary>

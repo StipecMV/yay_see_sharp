@@ -264,6 +264,15 @@
     <Setter Property="Margin" Value="0,0,0,6"/>
   </Style>
 
+  <!-- BUGFIX-2026-08: selected rows in the plain result/package lists get a visible highlight so
+       the user can always tell which package the right-hand detail pane corresponds to. -->
+  <Style Selector="ListBox.plain ListBoxItem:selected Border.row-card">
+    <Setter Property="Background" Value="{DynamicResource Brush.AccentTint}"/>
+  </Style>
+  <Style Selector="ListBox.plain ListBoxItem:selected Border.row-card TextBlock.name">
+    <Setter Property="Foreground" Value="{DynamicResource Brush.Accent}"/>
+  </Style>
+
   <!-- Bottom-of-sidebar Settings row: a Button (not a ListBoxItem) styled to match
        NavListBoxItem, with its own .selected class instead of relying on :selected — see
        MainWindowViewModel.IsSettingsSelected for why it isn't a second selectable ListBox. -->

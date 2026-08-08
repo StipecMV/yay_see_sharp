@@ -23,8 +23,9 @@
                                Foreground="{DynamicResource Brush.Accent}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel Grid.Column="1" Margin="24,0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Summary.Name}" FontSize="34" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
-                    <TextBlock FontSize="24" Foreground="{DynamicResource Brush.TextMuted}">
+                    <TextBlock Text="{Binding Summary.Name}" FontSize="34" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock FontSize="24" Foreground="{DynamicResource Brush.TextMuted}" TextTrimming="CharacterEllipsis">
                         <Run Text="v"/><Run Text="{Binding Summary.Version}"/>
                         <Run Text=" · "/>
                         <Run Text="{Binding Summary.Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"/>

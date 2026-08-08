@@ -42,8 +42,18 @@ public class InstalledPackagesViewModel : LocalizedViewModelBase
 
         // All/Official/AUR filter + live search — purely local (Packages is already fully loaded
         // client-side), so there's no backend round-trip to debounce for cost reasons, but the
-        // 300ms debounce is kept anyway so typing feels identical to the Search screen.
-        this.WhenAnyValue(x => x.Query, x => x.SourceFilter)
+        // 300ms debounce on typing is kept anyway so typing feels identical to the Search screen.
+        // BUGFIX-2026-08: the filter is observed via SelectedSourceOption (which raises
+        // PropertyChanged) instead of the computed SourceFilter (which never notifies). The old
+        // subscription meant a filter click did NOT re-filter — and worse, a filter stuck on
+        // Official/AUR combined with a later search/clear made the list look permanently broken
+        // ("cleared the search box, installed apps never came back"). Filter clicks now apply
+        // immediately; only typed queries are debounced.
+        this.WhenAnyValue(x => x.SelectedSourceOption)
+            .Skip(1)
+            .Subscribe(_ => ApplyFilter());
+        this.WhenAnyValue(x => x.Query)
+            .Skip(1)
             .Throttle(TimeSpan.FromMilliseconds(300), RxApp.MainThreadScheduler)
             .Subscribe(_ => ApplyFilter());
         this.WhenAnyValue(x => x.SelectedDetails)
@@ -162,7 +172,10 @@ public class InstalledPackagesViewModel : LocalizedViewModelBase
         new(PackageSource.Aur, Localization.GetString("Search.SourceAur")),
     ];
 
-    private async Task RefreshAsync()
+    /// <summary>Public so the shell (MainWindowViewModel) can refresh the list when the user
+    /// navigates to Installed — e.g. after installing a package from the Search screen, which
+    /// this ViewModel's own operation-completion hook can't see (BUGFIX-2026-08).</summary>
+    public async Task RefreshAsync()
     {
         IsBusy = true;
         ErrorMessage = null;

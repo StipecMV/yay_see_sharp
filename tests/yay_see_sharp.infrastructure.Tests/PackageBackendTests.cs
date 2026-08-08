@@ -1186,4 +1186,90 @@ public class PackageBackendTests
 
         await Assert.That(progress[^1].Stage).IsEqualTo(PackageOperationStage.Completed);
     }
+
+    // --- BUGFIX-2026-08: search state agrees with the Installed screen; failures carry details ---
+
+    [Test]
+    public async Task Yay_search_marks_packages_installed_based_on_pacman_state_even_without_an_installed_marker()
+    {
+        // Real-world regression: the Search screen showed an installed package (firefox) as
+        // "Install" while the Installed screen listed it as installed. The "[installed]" marker
+        // may be missing/odd from some yay output, so the backend now cross-checks `pacman -Qq`.
+        var runner = new Mock<ICommandRunner>();
+        var parser = new YayOutputParser();
+        var searchOutput = new[]
+        {
+            new CommandOutput(CommandOutputKind.StandardOutput, "extra/firefox 137.0.2-1\n    Web browser\n", DateTimeOffset.UtcNow),
+        };
+        runner.Setup(item => item.RunAsync(
+                It.Is<CommandRequest>(request =>
+                    request.FileName == "yay" && request.Arguments.SequenceEqual(new[] { "-Ss", "--", "firefox" })),
+                It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(0, searchOutput, false));
+        SetupPacman(runner, ["-Qq"], 0, "firefox");
+
+        var backend = new YayPackageBackend(runner.Object, parser);
+        var results = await backend.SearchAsync("firefox");
+
+        await Assert.That(results.Count).IsEqualTo(1);
+        await Assert.That(results[0].Name).IsEqualTo("firefox");
+        await Assert.That(results[0].State).IsEqualTo(PackageState.Installed);
+    }
+
+    [Test]
+    public async Task Yay_search_keeps_not_installed_state_for_packages_missing_from_pacman()
+    {
+        var runner = new Mock<ICommandRunner>();
+        var parser = new YayOutputParser();
+        var searchOutput = new[]
+        {
+            new CommandOutput(CommandOutputKind.StandardOutput, "aur/vlc-nightly 4.0.0-1\n    VLC nightly build\n", DateTimeOffset.UtcNow),
+        };
+        runner.Setup(item => item.RunAsync(
+                It.Is<CommandRequest>(request => request.FileName == "yay"),
+                It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(0, searchOutput, false));
+        SetupPacman(runner, ["-Qq"], 0, "firefox", "htop");
+
+        var backend = new YayPackageBackend(runner.Object, parser);
+        var results = await backend.SearchAsync("vlc");
+
+        await Assert.That(results[0].State).IsEqualTo(PackageState.NotInstalled);
+    }
+
+    [Test]
+    public async Task Yay_install_failure_message_includes_the_output_tail()
+    {
+        var runner = new Mock<ICommandRunner>();
+        var parser = new Mock<IYayOutputParser>();
+        var outputText = "==> Making package: vlc 3.0.20-1\n==> ERROR: makepkg failed to produce a package\nerror: failed to build 'vlc'";
+        runner.Setup(item => item.RunAsync(
+                It.IsAny<CommandRequest>(), It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(1,
+                [new CommandOutput(CommandOutputKind.StandardOutput, outputText, DateTimeOffset.UtcNow)], false));
+
+        var backend = new YayPackageBackend(runner.Object, parser.Object);
+        var progress = new List<PackageOperationProgress>();
+
+        await foreach (var item in backend.InstallAsync("vlc"))
+        {
+            progress.Add(item);
+        }
+
+        await Assert.That(progress[^1].Stage).IsEqualTo(PackageOperationStage.Failed);
+        await Assert.That(progress[^1].Message).Contains("exit code 1");
+        await Assert.That(progress[^1].Message).Contains("makepkg failed");
+    }
+
+    [Test]
+    public async Task Yay_search_parser_reads_the_installed_marker_from_yay_output()
+    {
+        var parser = new YayOutputParser();
+        const string output = "extra/firefox 137.0.2-1 [installed]\n    Web browser.\n";
+
+        var results = parser.ParseSearch(output);
+
+        await Assert.That(results.Count).IsEqualTo(1);
+        await Assert.That(results[0].State).IsEqualTo(PackageState.Installed);
+    }
 }

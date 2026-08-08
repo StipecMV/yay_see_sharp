@@ -97,10 +97,20 @@ public sealed class YayPackageBackend : IPackageBackend
         // so a query the user typed starting with '-' (e.g. "-Sy") can never be read as an
         // option. Always included, not just when the query looks suspicious, so the command
         // shape is the same for every search and doesn't need a second code path to test.
-        var result = await _commandRunner.RunAsync(
+        var searchTask = _commandRunner.RunAsync(
             new CommandRequest("yay", ["-Ss", "--", trimmedQuery]),
             cancellationToken: cancellationToken);
 
+        // BUGFIX-2026-08: the "[installed]" marker yay prints next to search results is the
+        // source of truth for the row state — but only when the marker actually appears in the
+        // parsed line. Cross-checking against `pacman -Qq` (a fast, local query) guarantees the
+        // Search screen's state always agrees with the Installed screen, regardless of yay
+        // version/output quirks. If the local query fails, the parsed markers are kept as-is.
+        var installedNamesTask = ReadInstalledNamesAsync(cancellationToken);
+
+        await Task.WhenAll(searchTask, installedNamesTask);
+
+        var result = searchTask.Result;
         if (!result.Succeeded)
         {
             throw new InvalidOperationException(
@@ -108,9 +118,49 @@ public sealed class YayPackageBackend : IPackageBackend
         }
 
         var packages = _outputParser.ParseSearch(result.CombinedText);
+        if (installedNamesTask.Result is { Count: > 0 } installedNames)
+        {
+            packages = packages
+                .Select(package => installedNames.Contains(package.Name)
+                    ? package with { State = PackageState.Installed }
+                    : package)
+                .ToArray();
+        }
+
         return source is null
             ? packages
             : packages.Where(package => package.Source == source).ToArray();
+    }
+
+    private async Task<IReadOnlySet<string>?> ReadInstalledNamesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await _commandRunner.RunAsync(
+                new CommandRequest("pacman", ["-Qq"]),
+                cancellationToken: cancellationToken);
+
+            if (!result.Succeeded)
+            {
+                return null;
+            }
+
+            return result.CombinedText
+                .Split('\n')
+                .Select(line => line.Trim())
+                .Where(line => line.Length > 0)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            // A failed/broken local state query must never take down a search — the parsed
+            // "[installed]" markers remain the fallback.
+            return null;
+        }
     }
 
     public async Task<PackageDetails?> GetDetailsAsync(
@@ -289,7 +339,7 @@ public sealed class YayPackageBackend : IPackageBackend
                 PackageOperationKind.Install,
                 PackageOperationStage.Failed,
                 0,
-                $"Installation failed with exit code {result.ExitCode}.",
+                FormatFailure("Installation", result.ExitCode, result.CombinedText),
                 displayCommand,
                 result.CombinedText);
             yield break;
@@ -367,7 +417,7 @@ public sealed class YayPackageBackend : IPackageBackend
                 PackageOperationKind.Uninstall,
                 PackageOperationStage.Failed,
                 0,
-                $"Removal failed with exit code {result.ExitCode}.",
+                FormatFailure("Removal", result.ExitCode, result.CombinedText),
                 displayCommand,
                 result.CombinedText);
             yield break;
@@ -480,7 +530,7 @@ public sealed class YayPackageBackend : IPackageBackend
                 PackageOperationKind.Update,
                 PackageOperationStage.Failed,
                 0,
-                $"Update failed with exit code {result.ExitCode}.",
+                FormatFailure("Update", result.ExitCode, result.CombinedText),
                 displayCommand,
                 result.CombinedText);
             yield break;
@@ -493,6 +543,37 @@ public sealed class YayPackageBackend : IPackageBackend
             "Update completed.",
             displayCommand,
             result.CombinedText);
+    }
+
+    /// <summary>
+    /// BUGFIX-2026-08: "Operation failed with exit code 1" told the user nothing about *why* the
+    /// operation failed. The failure message now appends the last few meaningful lines of the
+    /// process output (e.g. "error: target not found: foo" or a makepkg error), which is what
+    /// the toast surfaces. The full output stays available on the operation (BuildJob modal).
+    /// </summary>
+    private static string FormatFailure(string action, int exitCode, string? output)
+    {
+        var tail = SummarizeOutput(output);
+        return tail.Length == 0
+            ? $"{action} failed with exit code {exitCode}."
+            : $"{action} failed with exit code {exitCode}.\n\n{tail}";
+    }
+
+    private static string SummarizeOutput(string? output)
+    {
+        if (string.IsNullOrWhiteSpace(output))
+        {
+            return string.Empty;
+        }
+
+        var meaningful = output
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0)
+            .ToArray();
+
+        const int maxLines = 10;
+        return string.Join("\n", meaningful.TakeLast(maxLines));
     }
 
 }

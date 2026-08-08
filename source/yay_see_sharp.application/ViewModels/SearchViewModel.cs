@@ -48,20 +48,47 @@ public class SearchViewModel : LocalizedViewModelBase
         SelectPackageCommand = ReactiveCommand.Create<PackageSummary>(package => SelectedPackage = package);
         this.WhenAnyValue(x => x.SelectedPackage).Subscribe(OnSelectedPackageChanged);
 
-        // UI-07: live search — the query (and filter, so changing either re-runs the same search)
-        // drives the results automatically, debounced so fast typing doesn't fire a search per
-        // keystroke. Skip(1) deliberately excludes the constructor's own initial (Query="",
-        // SourceFilter=default) emission: every SearchViewModel in the app graph is constructed
-        // eagerly at startup whether or not the user ever visits Search, so without this every
-        // other screen's tests would also schedule a debounced background search. The Search
-        // screen's own initial empty-state content is loaded once, directly, right below instead.
-        this.WhenAnyValue(x => x.Query, x => x.SourceFilter)
+        // UI-07/ BUGFIX-2026-08: live search — the query (and filter, so changing either re-runs
+        // the same search) drives the results automatically, debounced so fast typing doesn't
+        // fire a search per keystroke. The filter is observed via SelectedSourceOption (which
+        // raises PropertyChanged) rather than the computed SourceFilter (which never notifies —
+        // that made filter clicks appear to do nothing until the next keystroke). Both selectors
+        // are projected to their *values* before DistinctUntilChanged: RaiseLocalizedPropertiesChanged
+        // reassigns SelectedSourceOption (a new SelectableOption instance, same Value) on language
+        // switches, and that must not look like a filter change. Skip(1) deliberately excludes the
+        // constructor's own initial (Query="", filter=default) emission: every SearchViewModel in
+        // the app graph is constructed eagerly at startup whether or not the user ever visits
+        // Search, so without this every other screen's tests would also schedule a debounced
+        // background search. The Search screen's own initial empty-state content is loaded once,
+        // directly, right below instead.
+        this.WhenAnyValue(x => x.Query, x => x.SelectedSourceOption)
+            .Select(tuple => (tuple.Item1, tuple.Item2.Value))
+            // DistinctUntilChanged BEFORE Skip(1): the constructor's initial emission must
+            // establish the "last seen" baseline for the dedupe, otherwise the *next* identical
+            // emission (e.g. a language switch that reassigns SelectedSourceOption) would be
+            // treated as a change and spuriously re-run the search.
+            .DistinctUntilChanged()
             .Skip(1)
             .Throttle(TimeSpan.FromMilliseconds(300), RxApp.MainThreadScheduler)
-            .DistinctUntilChanged()
             .Select(_ => Observable.FromAsync(RunLiveSearchAsync))
             .Switch()
             .Subscribe();
+
+        // BUGFIX-2026-08: switching All/Official/AUR must not leave the previous filter's rows on
+        // screen while the new search is in flight ("firefox lingered as AUR after switching
+        // away"). Clear immediately and raise the loading indicator; the debounced pipeline above
+        // then runs the actual search and repopulates. Value-based so a language switch (which
+        // reassigns SelectedSourceOption to a new instance with the same value) is a no-op.
+        this.WhenAnyValue(x => x.SelectedSourceOption)
+            .Select(option => option.Value)
+            .DistinctUntilChanged()
+            .Skip(1)
+            .Subscribe(_ =>
+            {
+                IsBusy = true;
+                Results.Clear();
+                this.RaisePropertyChanged(nameof(HasNoResults));
+            });
 
         // UI-08: an empty query shows curated recommended packages instead of a blank screen —
         // loaded once immediately, matching the same fire-and-forget initial-load pattern
@@ -156,6 +183,32 @@ public class SearchViewModel : LocalizedViewModelBase
     private Task RunLiveSearchAsync() =>
         string.IsNullOrWhiteSpace(Query) ? LoadRecommendedAsync() : SearchAsync();
 
+    /// <summary>BUGFIX-2026-08: keep the selected row selected across result reloads — the list is
+    /// rebuilt on every live search, which otherwise drops the selection (and with it the detail
+    /// pane). Re-selects by name if the previously selected package is still in the new set.</summary>
+    private void RepopulateResults(IEnumerable<PackageSummary> packages)
+    {
+        var previouslySelectedName = SelectedPackage?.Name;
+
+        Results.Clear();
+        foreach (var package in packages)
+        {
+            Results.Add(package);
+        }
+
+        this.RaisePropertyChanged(nameof(HasNoResults));
+
+        if (previouslySelectedName is not null)
+        {
+            var match = Results.FirstOrDefault(package =>
+                package.Name.Equals(previouslySelectedName, StringComparison.OrdinalIgnoreCase));
+            if (match is not null)
+            {
+                SelectedPackage = match;
+            }
+        }
+    }
+
     private async Task SearchAsync()
     {
         IsBusy = true;
@@ -163,13 +216,7 @@ public class SearchViewModel : LocalizedViewModelBase
         try
         {
             var results = await _backend.SearchAsync(Query, SourceFilter);
-            Results.Clear();
-            foreach (var package in results)
-            {
-                Results.Add(package);
-            }
-
-            this.RaisePropertyChanged(nameof(HasNoResults));
+            RepopulateResults(results);
         }
         catch (Exception ex)
         {
@@ -201,13 +248,7 @@ public class SearchViewModel : LocalizedViewModelBase
                 .Select(package => package!)
                 .ToArray();
 
-            Results.Clear();
-            foreach (var package in curated)
-            {
-                Results.Add(package);
-            }
-
-            this.RaisePropertyChanged(nameof(HasNoResults));
+            RepopulateResults(curated);
         }
         catch (Exception ex)
         {

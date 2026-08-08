@@ -160,14 +160,21 @@ public class DashboardViewModel : LocalizedViewModelBase
         this.RaisePropertyChanged(nameof(DisplayErrorMessage));
     }
 
-    private async Task RefreshAsync()
+    /// <summary>Public so the shell (MainWindowViewModel) can refresh the dashboard when the user
+    /// navigates to it after package operations elsewhere.</summary>
+    public async Task RefreshAsync()
     {
         IsBusy = true;
         ErrorMessage = null;
         try
         {
-            Statistics = await _backend.GetStatisticsAsync();
+            var statistics = await _backend.GetStatisticsAsync();
             Updates = await _backend.GetUpdatesAsync();
+            // BUGFIX-2026-08: the "Updates available" card must agree with the update list below
+            // it. GetStatisticsAsync counts `pacman -Qu` (repo-only), while the list comes from
+            // `yay -Qu` (repo + AUR) — on a system with AUR packages the two disagreed. The
+            // count now always mirrors the list that's actually rendered.
+            Statistics = statistics with { UpdatesAvailable = Updates.Count };
         }
         catch (Exception ex)
         {

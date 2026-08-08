@@ -1,7 +1,7 @@
 # Yay See Sharp
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Tests](https://img.shields.io/badge/tests-268%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-273%20passed-brightgreen)
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 ![Avalonia](https://img.shields.io/badge/Avalonia%20UI-12.x-6E40C9)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
@@ -28,15 +28,15 @@ A fast, minimal desktop GUI for the [`yay`](https://github.com/Jguer/yay) AUR he
 
 ## Features
 
-- **Search** the official repositories and the AUR side by side, filterable by source
-- **Install / uninstall / update** with live, streamed command output and a cancellable progress modal
-- **Automatic backend detection** — real `yay` on Arch Linux/CachyOS *with `yay` on PATH*, a realistic in-memory **Demo mode** everywhere else (safe to explore on any distro, never touches the host); on Arch/CachyOS *without* `yay`, the app offers to install it instead of silently pretending Real mode works
-- **Scheduled background update checks** with desktop notifications
+- **Search** the official repositories and the AUR side by side, filterable by source, with a visible loading indicator while searches are in flight
+- **Install / uninstall / update** with live, streamed command output and a cancellable progress modal; failures show the actual error output, not just an exit code
+- **Automatic backend detection** — real `yay` on Arch Linux/CachyOS *with `yay` on PATH*, a realistic in-memory **Demo mode** everywhere else (safe to explore on any distro, never touches the host); on Arch/CachyOS *without* `yay`, the app offers to install it instead of silently pretending Real mode works; the Settings **Detect** button reports what it actually found
+- **Scheduled background update checks** with in-app notifications (OS-level notifications are opt-in via Settings — off by default, so one event never produces two popups)
 - **In-app PKGBUILD viewer** — fetched straight from the AUR, no browser round-trip
 - **Orphan cleanup** on uninstall, configurable as a default
 - **Live English/Slovak localization** — switch languages without restarting
 - **System tray** integration — icon visible from startup, minimize-to-tray and close-to-tray
-- **In-app toast notifications** for install/uninstall/update results and errors, auto-dismissing after 30s
+- **In-app toast notifications** for install/uninstall/update results and errors, auto-dismissing after 10s
 - Secure privilege elevation via `sudo`, with the password never touching argv, logs, or disk
 
 > **Future feature — AUR helper build directory:** a custom `--builddir` for `yay` install/update operations is modeled in the settings persistence layer (`SettingsViewModel.BuildDirectory`, `IBuildDirectoryPolicy`) and already wired into `YayPackageBackend`, but is **not exposed in the current UI** — there is no Settings screen control for it yet. It's always unset today and has no effect on install/update behavior.
@@ -59,7 +59,7 @@ dotnet run --project source/yay_see_sharp.application/yay_see_sharp.application.
 
 The active mode is detected automatically at startup: Arch Linux/CachyOS with `yay` installed runs in **Real mode**; everything else runs in **Demo mode** with simulated data.
 
-> **Real mode status:** the Real backend (`YayPackageBackend`) is implemented and covered by unit/contract tests against a faked `yay`/`pacman` process runner — it has **not** been run against a live Arch/CachyOS host with real `yay` in this repository's own CI. Demo mode, all headless E2E UI tests, and the architecture/composition-root checks *are* verified automatically on every build. **"Code exists" is not the same as "verified working on a real host":** anything that needs a real display session, a real D-Bus/notification daemon, a real system tray, or a real `sudo` prompt (tray icon behavior, desktop notifications, the interactive privilege-elevation dialog, the `yay` install flow) is exercised only in Demo mode and headless E2E here — it requires manual verification on an actual Arch/CachyOS desktop before being trusted in production.
+> **Real mode status:** the Real backend (`YayPackageBackend`) was exercised on a live CachyOS desktop in August 2026 (install/uninstall/update flows, search, filters, settings) and the issues found there were fixed and covered by regression tests — see [`docs/bugfixes-2026-08.md`](docs/bugfixes-2026-08.md). It is still **not** verified in this repository's own CI (no Arch/CachyOS runner with real `yay` yet); anything that needs a real display session, a real D-Bus/notification daemon, a real system tray, or a real `sudo` prompt (tray icon behavior, OS-level desktop notifications, the interactive privilege-elevation dialog) is exercised only in Demo mode and headless E2E here — it requires manual verification on an actual Arch/CachyOS desktop before being trusted in production.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ graph TD
 
 The UI never shells out to `yay`, `pacman`, or any command directly — every package operation goes through `IPackageBackend`, so the same ViewModels drive both the real backend and the Demo backend identically.
 
-See [`docs/architecture.md`](docs/architecture.md) for the full breakdown, [`docs/product-requirements.md`](docs/product-requirements.md) for the requirements, and [`docs/aur-packaging-guide.md`](docs/aur-packaging-guide.md) for packaging on the AUR.
+See [`docs/architecture.md`](docs/architecture.md) for the full breakdown, [`docs/product-requirements.md`](docs/product-requirements.md) for the requirements, [`docs/aur-packaging-guide.md`](docs/aur-packaging-guide.md) for packaging on the AUR, and [`docs/bugfixes-2026-08.md`](docs/bugfixes-2026-08.md) for the 2026-08 bugfix round from live CachyOS feedback.
 
 ## Testing
 

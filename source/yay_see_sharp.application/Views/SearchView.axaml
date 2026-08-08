@@ -20,6 +20,11 @@
                      ItemsSource="{Binding SourceOptions}"
                      SelectedItem="{Binding SelectedSourceOption}"
                      HorizontalAlignment="Left">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal"/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Label}"/>
@@ -37,6 +42,13 @@
                 </Grid>
             </Border>
 
+            <!-- BUGFIX-2026-08: a visible loading indicator while a search/filter change is in
+                 flight (yay searches can take seconds on a cold cache) — the previous behaviour
+                 of keeping the old rows on screen with no feedback read as a broken UI. -->
+            <ProgressBar IsIndeterminate="True" Height="6" IsVisible="{Binding IsBusy}"
+                         Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"
+                         CornerRadius="3"/>
+
             <TextBlock Text="{Binding ErrorMessage}" IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}"
                        Foreground="{DynamicResource Brush.Destructive}" FontSize="24" TextWrapping="Wrap"/>
         </StackPanel>
@@ -46,20 +58,14 @@
 
         <Grid DockPanel.Dock="Top" ColumnDefinitions="2*,3*">
             <ScrollViewer Grid.Column="0" Margin="40,0,20,32">
-                <ItemsControl ItemsSource="{Binding Results}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <StackPanel Spacing="12"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
+                <!-- BUGFIX-2026-08: a real ListBox (was: ItemsControl of Buttons) so the selected
+                     row stays visibly selected and the right-hand detail pane always corresponds
+                     to it; selection is re-applied by name after every live-search reload. -->
+                <ListBox Classes="plain" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedPackage}">
+                    <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="models:PackageSummary" x:CompileBindings="False">
-                            <!-- UI-09: the row itself navigates to the detail pane; Install stays as an
-                                 independent shortcut — Avalonia's routed pointer events mean clicking the
-                                 nested Install button does not also trigger the row's own click. -->
-                            <Button Classes="row" Padding="20,18"
-                                    Command="{Binding $parent[UserControl].DataContext.SelectPackageCommand}"
-                                    CommandParameter="{Binding}">
+                            <Border Classes="row-card" Background="{DynamicResource Brush.RowFill}"
+                                    CornerRadius="12" Padding="20,18">
                                 <Grid ColumnDefinitions="64,*,Auto">
                                     <Border Grid.Column="0" Width="64" Height="64" CornerRadius="14" VerticalAlignment="Top"
                                             Margin="0,0,20,0" Background="{DynamicResource Brush.AccentTint}">
@@ -70,14 +76,16 @@
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,20,0">
                                         <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <TextBlock Text="{Binding Name}" FontSize="27" Foreground="{DynamicResource Brush.Text}"/>
-                                            <Border Theme="{StaticResource TagNeutral}">
+                                            <TextBlock Classes="name" Text="{Binding Name}" FontSize="27" Foreground="{DynamicResource Brush.Text}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <Border Theme="{StaticResource TagNeutral}" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"
                                                            FontSize="24" Foreground="{DynamicResource Brush.TagNeutralFg}"/>
                                             </Border>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Description}" FontSize="23" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
-                                        <TextBlock FontSize="21" Foreground="{DynamicResource Brush.TextFaint}" FontFamily="{DynamicResource Font.Monospace}">
+                                        <TextBlock FontSize="21" Foreground="{DynamicResource Brush.TextFaint}" FontFamily="{DynamicResource Font.Monospace}"
+                                                   TextTrimming="CharacterEllipsis">
                                             <Run Text="{Binding Votes, Converter={x:Static conv:VotesConverter.Instance}}"/>
                                             <Run Text="v"/><Run Text="{Binding Version}"/>
                                         </TextBlock>
@@ -93,10 +101,10 @@
                                             Command="{Binding $parent[UserControl].DataContext.InstallCommand}"
                                             CommandParameter="{Binding}"/>
                                 </Grid>
-                            </Button>
+                            </Border>
                         </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </ScrollViewer>
 
             <ContentControl Grid.Column="1" Margin="0,0,40,32" Content="{Binding SelectedDetails}"/>

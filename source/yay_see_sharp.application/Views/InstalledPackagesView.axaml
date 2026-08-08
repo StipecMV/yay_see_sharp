@@ -21,6 +21,11 @@
                          ItemsSource="{Binding SourceOptions}"
                          SelectedItem="{Binding SelectedSourceOption}"
                          HorizontalAlignment="Left">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Label}"/>
@@ -37,6 +42,12 @@
                                  Background="Transparent" BorderThickness="0" Padding="0"/>
                     </Grid>
                 </Border>
+
+                <!-- BUGFIX-2026-08: visible loading indicator while the installed list refreshes
+                     (querying 100+ packages takes a moment). -->
+                <ProgressBar IsIndeterminate="True" Height="6" IsVisible="{Binding IsBusy}"
+                             Background="{DynamicResource Brush.Divider}" Foreground="{DynamicResource Brush.Accent}"
+                             CornerRadius="3"/>
             </StackPanel>
 
             <TextBlock DockPanel.Dock="Top" Margin="40,0,40,20" Text="{Binding EmptyLabel}" IsVisible="{Binding HasNoPackages}"
@@ -54,14 +65,19 @@
                     <ListBox Classes="plain" ItemsSource="{Binding FilteredPackages}" SelectedItem="{Binding SelectedPackage}">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="models:PackageSummary" x:CompileBindings="False">
-                                <Border Background="{DynamicResource Brush.RowFill}" CornerRadius="12" Padding="20,18">
-                                    <Grid ColumnDefinitions="*,64,52,44">
-                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="26"
-                                                   Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"/>
+                                <!-- BUGFIX-2026-08: fixed-width columns ("*,64,52,44") cut long versions /
+                                     sizes once the UI font was doubled; name/version/size are now
+                                     content-sized (Auto) with the name trimming, and the row carries the
+                                     .row-card class so selection highlights it (see Controls.axaml). -->
+                                <Border Classes="row-card" Background="{DynamicResource Brush.RowFill}" CornerRadius="12" Padding="20,18">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                                        <TextBlock Classes="name" Grid.Column="0" Text="{Binding Name}" FontSize="26"
+                                                   Foreground="{DynamicResource Brush.Text}" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis" Margin="0,0,16,0"/>
                                         <TextBlock Grid.Column="1" Text="{Binding Version}" FontSize="22" FontFamily="{DynamicResource Font.Monospace}"
-                                                   Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center"/>
+                                                   Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center" Margin="0,0,20,0"/>
                                         <TextBlock Grid.Column="2" Text="{Binding InstalledSizeBytes, Converter={x:Static conv:ByteSizeConverter.Instance}}"
-                                                   FontSize="22" Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center"/>
+                                                   FontSize="22" Foreground="{DynamicResource Brush.TextFaint}" VerticalAlignment="Center" Margin="0,0,20,0"/>
                                         <Border Grid.Column="3" Theme="{StaticResource TagNeutral}" HorizontalAlignment="Center" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Source, Converter={x:Static conv:PackageSourceTagConverter.Instance}}"
                                                        FontSize="24" Foreground="{DynamicResource Brush.TagNeutralFg}"/>

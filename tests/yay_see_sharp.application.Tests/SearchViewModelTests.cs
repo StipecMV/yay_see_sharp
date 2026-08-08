@@ -124,4 +124,77 @@ public class SearchViewModelTests
         await Assert.That(viewModel.Results.Count).IsEqualTo(resultCountBefore);
         await Assert.That(viewModel.Query).IsEqualTo("fire");
     }
+
+    // --- BUGFIX-2026-08: filter switches re-search (with immediate clear), selection survives reloads ---
+
+    [Test]
+    public async Task Switching_the_source_filter_triggers_a_new_search_with_that_source()
+    {
+        var backend = new Mock<IPackageBackend>();
+        backend.Setup(b => b.SearchAsync(It.IsAny<string>(), It.IsAny<PackageSource?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PackageSummary>());
+        var viewModel = new SearchViewModel(backend.Object, new LocalizationService("en"), Mock.Of<IPkgbuildService>()) { Query = "firefox" };
+
+        // The previous subscription watched the computed SourceFilter, which never notified —
+        // filter clicks did nothing until the next keystroke. The fix watches SelectedSourceOption.
+        viewModel.SelectedSourceOption = viewModel.SourceOptions.Single(option => option.Value == PackageSource.Aur);
+
+        await WaitUntilAsync(
+            () => backend.Invocations.Any(invocation =>
+                invocation.Method.Name == nameof(IPackageBackend.SearchAsync) &&
+                invocation.Arguments.ElementAtOrDefault(1) is PackageSource.Aur),
+            TimeSpan.FromSeconds(3));
+
+        backend.Verify(b => b.SearchAsync("firefox", PackageSource.Aur, It.IsAny<CancellationToken>()), Times.AtLeastOnce);
+    }
+
+    [Test]
+    public async Task Switching_the_source_filter_clears_stale_results_immediately()
+    {
+        var backend = new DemoPackageBackend();
+        var viewModel = new SearchViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>()) { Query = "fire" };
+        await viewModel.SearchCommand.Execute();
+        await Assert.That(viewModel.Results.Count).IsGreaterThan(0);
+
+        viewModel.SelectedSourceOption = viewModel.SourceOptions.Single(option => option.Value == PackageSource.Aur);
+
+        // The old filter's rows must not linger while the new search is in flight.
+        await Assert.That(viewModel.Results.Count).IsEqualTo(0);
+        await Assert.That(viewModel.IsBusy).IsTrue();
+    }
+
+    [Test]
+    public async Task Selection_is_preserved_across_a_search_reload()
+    {
+        var backend = new DemoPackageBackend();
+        var viewModel = new SearchViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>()) { Query = "fire" };
+        await viewModel.SearchCommand.Execute();
+        var selected = viewModel.Results[0];
+        viewModel.SelectedPackage = selected;
+
+        await viewModel.SearchCommand.Execute();
+
+        await Assert.That(viewModel.SelectedPackage).IsNotNull();
+        await Assert.That(viewModel.SelectedPackage!.Name).IsEqualTo(selected.Name);
+        await Assert.That(viewModel.SelectedDetails).IsNotNull();
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(10);
+        }
+
+        if (!condition())
+        {
+            throw new TimeoutException("Condition was not met within the timeout.");
+        }
+    }
 }

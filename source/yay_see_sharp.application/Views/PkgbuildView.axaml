@@ -7,8 +7,12 @@
              x:Class="yay_see_sharp.application.Views.PkgbuildView"
              x:DataType="vm:PkgbuildViewModel">
 
+    <!-- BUGFIX-2026-08: a fixed Width=960 overflowed the window whenever the app wasn't
+         maximized (the modal was clipped and barely readable). The modal now shrinks to fit the
+         available space (max 960×880) and centers itself; the inner code block scrolls. -->
     <Border Background="{DynamicResource Brush.Surface}" CornerRadius="20" Padding="32"
-            Width="960" MaxHeight="880" HorizontalAlignment="Center" VerticalAlignment="Center">
+            MaxWidth="960" MaxHeight="880" Margin="64,48"
+            HorizontalAlignment="Center" VerticalAlignment="Center">
         <Grid RowDefinitions="Auto,*,Auto" MinHeight="360">
 
             <!-- UI-12: no small × close affordance up here — the large Close button below is the

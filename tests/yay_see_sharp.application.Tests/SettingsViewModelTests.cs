@@ -2,7 +2,9 @@ using Moq;
 using System;
 using System.IO;
 using System.Linq;
+using System.Reactive;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
@@ -58,7 +60,10 @@ public class SettingsViewModelTests
         {
             await Assert.That(viewModel.IsSaved).IsFalse();
 
-            viewModel.NotificationsEnabled = false;
+            // BUGFIX-2026-08: AppSettings.Default.NotificationsEnabled is now false (desktop
+            // notifications off by default), so `NotificationsEnabled = false` is a no-op that
+            // would never trigger a save — flip it to true to represent a real change.
+            viewModel.NotificationsEnabled = true;
             await viewModel.WhenAnyValue(x => x.IsSaved).FirstAsync(saved => saved);
 
             await Assert.That(viewModel.IsSaved).IsTrue();
@@ -185,6 +190,135 @@ public class SettingsViewModelTests
         var viewModel = new SettingsViewModel(store, new LocalizationService("en"), persisted, Mock.Of<IEngineDetector>());
 
         await Assert.That(viewModel.Engine).IsEqualTo(PackageManagerEngine.Yay);
+    }
+
+    // --- BUGFIX-2026-08: Detect reports what it found; "Saved" only after a real change ---
+
+    [Test]
+    public async Task Detect_in_real_mode_reports_the_found_engine_instead_of_a_save_toast()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+        var store = new FileSettingsStore(path);
+        var notifications = new RecordingNotificationService();
+        var detector = new Mock<IEngineDetector>();
+        detector.Setup(d => d.Detect()).Returns(PackageManagerEngine.Yay);
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, detector.Object, notifications);
+        viewModel.SetBackendMode(BackendMode.Real);
+
+        viewModel.DetectEngineCommand.Execute().Subscribe();
+
+        await Assert.That(notifications.Sent.Count).IsEqualTo(1);
+        await Assert.That(notifications.Sent[0].Title).IsEqualTo("Detection result");
+        await Assert.That(notifications.Sent[0].Body).Contains("yay");
+        await Assert.That(notifications.Sent[0].Level).IsEqualTo(NotificationLevel.Success);
+        // Detect must not trigger an auto-save ("Saved" toast) when nothing changed.
+        await Assert.That(viewModel.IsSaved).IsFalse();
+        await Assert.That(File.Exists(path)).IsFalse();
+    }
+
+    [Test]
+    public async Task Detect_reports_paru_and_nothing_found_without_saving()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+        var store = new FileSettingsStore(path);
+        var notifications = new RecordingNotificationService();
+        var detector = new Mock<IEngineDetector>();
+        detector.Setup(d => d.Detect()).Returns(PackageManagerEngine.Paru);
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, detector.Object, notifications);
+        viewModel.SetBackendMode(BackendMode.Real);
+
+        viewModel.DetectEngineCommand.Execute().Subscribe();
+
+        await Assert.That(notifications.Sent.Count).IsEqualTo(1);
+        await Assert.That(notifications.Sent[0].Title).IsEqualTo("Detection result");
+        await Assert.That(notifications.Sent[0].Body).Contains("paru");
+        await Assert.That(notifications.Sent[0].Level).IsEqualTo(NotificationLevel.Info);
+        await Assert.That(File.Exists(path)).IsFalse();
+
+        notifications.Sent.Clear();
+        detector.Setup(d => d.Detect()).Returns((PackageManagerEngine?)null);
+
+        viewModel.DetectEngineCommand.Execute().Subscribe();
+
+        await Assert.That(notifications.Sent.Count).IsEqualTo(1);
+        await Assert.That(notifications.Sent[0].Body).Contains("No supported package manager engine");
+        await Assert.That(notifications.Sent[0].Level).IsEqualTo(NotificationLevel.Warning);
+        await Assert.That(File.Exists(path)).IsFalse();
+    }
+
+    [Test]
+    public async Task Detect_in_simulated_mode_explains_detection_is_unavailable()
+    {
+        var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
+        var notifications = new RecordingNotificationService();
+        var detector = new Mock<IEngineDetector>();
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, detector.Object, notifications);
+        // Mode stays Demo (SetBackendMode never called / non-Real).
+
+        viewModel.DetectEngineCommand.Execute().Subscribe();
+
+        await Assert.That(notifications.Sent.Count).IsEqualTo(1);
+        await Assert.That(notifications.Sent[0].Title).IsEqualTo("Simulated mode");
+        detector.Verify(d => d.Detect(), Times.Never);
+    }
+
+    [Test]
+    public async Task Saved_toast_only_fires_after_an_actual_change()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
+        var store = new FileSettingsStore(path);
+        var notifications = new RecordingNotificationService();
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, Mock.Of<IEngineDetector>(), notifications);
+
+        // Constructed with no changes → nothing saved, no toast (regression: spurious
+        // load-time pushes must not surface a "Saved" toast).
+        await Assert.That(notifications.Sent).IsEmpty();
+
+        viewModel.Theme = ThemePreference.Dark;
+        await viewModel.WhenAnyValue(x => x.IsSaved).FirstAsync(saved => saved);
+
+        // The toast is sent right after IsSaved flips (the save loop's last step), so poll
+        // briefly instead of asserting immediately — the two are deliberately not atomic.
+        await WaitUntilAsync(() => notifications.Sent.Count == 1, TimeSpan.FromSeconds(2));
+
+        await Assert.That(notifications.Sent.Count).IsEqualTo(1);
+        await Assert.That(notifications.Sent[0].Title).IsEqualTo("Saved");
+        await Assert.That(notifications.Sent[0].Level).IsEqualTo(NotificationLevel.Success);
+    }
+
+    private static async Task WaitUntilAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (DateTime.UtcNow < deadline)
+        {
+            if (condition())
+            {
+                return;
+            }
+
+            await Task.Delay(10);
+        }
+
+        if (!condition())
+        {
+            throw new TimeoutException("Condition was not met within the timeout.");
+        }
+    }
+
+    /// <summary>Records every notification a ViewModel sent — no OS/UI side effects.</summary>
+    private sealed class RecordingNotificationService : INotificationService
+    {
+        public List<(string Title, string Body, NotificationLevel Level)> Sent { get; } = [];
+
+        public Task SendAsync(
+            string title,
+            string body,
+            NotificationLevel level = NotificationLevel.Info,
+            CancellationToken cancellationToken = default)
+        {
+            Sent.Add((title, body, level));
+            return Task.CompletedTask;
+        }
     }
 
 }

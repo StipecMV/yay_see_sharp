@@ -72,10 +72,25 @@ public class MainWindowViewModel : LocalizedViewModelBase
         // other's "item not in my list" case last wins, so clicking Settings could get silently
         // reverted by the main list's own binding. IsSettingsSelected drives the row's selected
         // visual state directly instead.
+        //
+        // BUGFIX-2026-08: navigating to Installed or Dashboard re-fetches their data. Installing
+        // a package from Search (or updating from Dashboard) previously left Installed showing a
+        // stale snapshot — "installed htop, it never appeared in Installed". A refresh on entry
+        // is the single hook that covers every mutation path, including ones made outside the
+        // app (terminal, other package tools).
         this.WhenAnyValue(x => x.SelectedNavigationItem)
             .Subscribe(item =>
             {
                 CurrentPage = ResolvePage(item);
+                if (item.Section == NavigationSection.Installed)
+                {
+                    Installed.RefreshAsync().FireAndForget();
+                }
+                else if (item.Section == NavigationSection.Dashboard)
+                {
+                    Dashboard.RefreshAsync().FireAndForget();
+                }
+
                 this.RaisePropertyChanged(nameof(IsSettingsSelected));
             });
 

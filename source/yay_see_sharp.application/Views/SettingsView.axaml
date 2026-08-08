@@ -18,6 +18,11 @@
                                Foreground="{DynamicResource Brush.Text}" Margin="0,0,0,16"/>
                     <ListBox Theme="{StaticResource SegmentedListBox}" HorizontalAlignment="Left"
                              ItemsSource="{Binding ThemeOptions}" SelectedValue="{Binding Theme}" SelectedValueBinding="{Binding Value}">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding Label}"/>
@@ -51,6 +56,11 @@
                         <ListBox Theme="{StaticResource SegmentedListBox}"
                                  ItemsSource="{Binding EngineOptions}" SelectedValue="{Binding Engine}" SelectedValueBinding="{Binding Value}"
                                  PointerPressed="OnEngineOptionsPressed">
+                            <ListBox.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ListBox.ItemsPanel>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding Label}"/>

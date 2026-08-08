@@ -13,7 +13,10 @@ namespace yay_see_sharp.application.Platform;
 /// </summary>
 public sealed class ToastService : INotificationService
 {
-    private static readonly TimeSpan AutoDismissAfter = TimeSpan.FromSeconds(30);
+    // BUGFIX-2026-08: 30s was far too long for an in-app toast — it lingered long after the
+    // user had already read it (and stacked toasts made it feel like ~1 minute). 10s keeps it
+    // visible long enough to read while staying out of the way.
+    private static readonly TimeSpan AutoDismissAfter = TimeSpan.FromSeconds(10);
 
     public ObservableCollection<ToastViewModel> Toasts { get; } = [];
 

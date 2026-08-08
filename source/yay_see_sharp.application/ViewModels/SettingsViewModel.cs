@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Linq;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
@@ -13,8 +15,8 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
     private readonly INotificationService _notificationService;
     private BackendMode _backendMode = BackendMode.Demo;
 
-    private Task? _pendingSave;
-    private bool _dirtyWhileSaving;
+    private AppSettings _lastSavedSettings;
+    private IDisposable? _savePipeline;
 
     private string _language;
     private ThemePreference _theme;
@@ -56,6 +58,28 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         EngineOptions = BuildEngineOptions();
 
         DetectEngineCommand = ReactiveCommand.Create(DetectEngine);
+
+        // BUGFIX-2026-08: settings auto-save runs through a short debounced pipeline instead of
+        // being triggered from every setter. Load-time binding pushes (e.g. the Language ComboBox
+        // briefly writing "" and then the real value while the Settings view initializes) used to
+        // fire the save machinery and surface a spurious "Saved" toast even though nothing had
+        // changed. The debounce collapses rapid pushes into one evaluation, and the diff against
+        // the last-persisted values skips the save+toast entirely when the net result is
+        // unchanged. A real user change (final values differ) still saves immediately after the
+        // debounce window and shows the toast.
+        _lastSavedSettings = initial;
+        _savePipeline = Observable
+            .FromEventPattern<PropertyChangedEventHandler, PropertyChangedEventArgs>(
+                handler => PropertyChanged += handler,
+                handler => PropertyChanged -= handler)
+            .Throttle(TimeSpan.FromMilliseconds(250), RxApp.MainThreadScheduler)
+            .Subscribe(_ => RunSaveIfChangedAsync().FireAndForget());
+    }
+
+    public override void Dispose()
+    {
+        _savePipeline?.Dispose();
+        base.Dispose();
     }
 
     public IReadOnlyList<SelectableOption<string>> LanguageOptions
@@ -104,6 +128,14 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
 
     public string DetectLabel => Localization.GetString("Settings.Detect");
 
+    public string DetectResultTitleLabel => Localization.GetString("Settings.DetectResultTitle");
+
+    public string DetectFoundYayLabel => Localization.GetString("Settings.DetectFoundYay");
+
+    public string DetectFoundParuLabel => Localization.GetString("Settings.DetectFoundParu");
+
+    public string DetectFoundNoneLabel => Localization.GetString("Settings.DetectFoundNone");
+
     public string SavedLabel => Localization.GetString("Settings.Saved");
 
     public string Language
@@ -111,9 +143,18 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _language;
         set
         {
+            // BUGFIX-2026-08: ignore the empty-string push Avalonia's ComboBox writes during
+            // view initialization (SelectedValue briefly goes null → "" before the bound value
+            // lands). It's never a valid language (SetLanguage("") normalizes back to "en"), and
+            // accepting it used to trigger the auto-save machinery → spurious "Saved" toast.
+            if (string.IsNullOrEmpty(value) ||
+                EqualityComparer<string>.Default.Equals(_language, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _language, value);
             Localization.SetLanguage(value);
-            TriggerAutoSave();
         }
     }
 
@@ -122,8 +163,12 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _theme;
         set
         {
+            if (EqualityComparer<ThemePreference>.Default.Equals(_theme, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _theme, value);
-            TriggerAutoSave();
         }
     }
 
@@ -132,9 +177,13 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _closeAction;
         set
         {
+            if (EqualityComparer<CloseAction>.Default.Equals(_closeAction, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _closeAction, value);
             this.RaisePropertyChanged(nameof(MinimizeToTrayEnabled));
-            TriggerAutoSave();
         }
     }
 
@@ -143,8 +192,12 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _notificationsEnabled;
         set
         {
+            if (EqualityComparer<bool>.Default.Equals(_notificationsEnabled, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _notificationsEnabled, value);
-            TriggerAutoSave();
         }
     }
 
@@ -153,8 +206,12 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _removeOrphansByDefault;
         set
         {
+            if (EqualityComparer<bool>.Default.Equals(_removeOrphansByDefault, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _removeOrphansByDefault, value);
-            TriggerAutoSave();
         }
     }
 
@@ -163,10 +220,14 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _updateScheduleTime;
         set
         {
+            if (EqualityComparer<TimeOnly>.Default.Equals(_updateScheduleTime, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _updateScheduleTime, value);
             this.RaisePropertyChanged(nameof(UpdateScheduleTimeOfDay));
             this.RaisePropertyChanged(nameof(AutoUpdateHintLabel));
-            TriggerAutoSave();
         }
     }
 
@@ -181,8 +242,12 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _engine;
         set
         {
+            if (EqualityComparer<PackageManagerEngine>.Default.Equals(_engine, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _engine, value);
-            TriggerAutoSave();
         }
     }
 
@@ -191,8 +256,12 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _buildDirectory;
         set
         {
+            if (EqualityComparer<string>.Default.Equals(_buildDirectory, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _buildDirectory, value);
-            TriggerAutoSave();
         }
     }
 
@@ -201,8 +270,12 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         get => _autoUpdateCheckEnabled;
         set
         {
+            if (EqualityComparer<bool>.Default.Equals(_autoUpdateCheckEnabled, value))
+            {
+                return;
+            }
+
             this.RaiseAndSetIfChanged(ref _autoUpdateCheckEnabled, value);
-            TriggerAutoSave();
         }
     }
 
@@ -246,6 +319,10 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         this.RaisePropertyChanged(nameof(EngineLabel));
         this.RaisePropertyChanged(nameof(EngineHintLabel));
         this.RaisePropertyChanged(nameof(DetectLabel));
+        this.RaisePropertyChanged(nameof(DetectResultTitleLabel));
+        this.RaisePropertyChanged(nameof(DetectFoundYayLabel));
+        this.RaisePropertyChanged(nameof(DetectFoundParuLabel));
+        this.RaisePropertyChanged(nameof(DetectFoundNoneLabel));
         this.RaisePropertyChanged(nameof(SavedLabel));
 
         // Update labels in-place — do NOT replace the list instances.
@@ -281,6 +358,11 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         new(PackageManagerEngine.Yay, Localization.GetString($"Settings.Engine.{PackageManagerEngine.Yay}")),
     ];
 
+    /// <summary>
+    /// BUGFIX-2026-08: Detect always reports what it actually found (a "Detection result" toast),
+    /// instead of silently applying the engine and letting the auto-save machinery surface a
+    /// confusing "Saved" toast — or, in Real mode with yay already configured, nothing at all.
+    /// </summary>
     private void DetectEngine()
     {
         // UI-17: in Demo/Simulated mode the running backend is fixed for this session regardless
@@ -297,10 +379,24 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         }
 
         // Detection can still report Paru if that's what's on PATH, but there's nothing to
-        // switch to yet, so only a Yay result is applied.
-        if (_engineDetector.Detect() is PackageManagerEngine.Yay)
+        // switch to yet, so only a Yay result is applied (and even then Engine is already Yay in
+        // practice — the assignment is defensive, not a real change).
+        var detected = _engineDetector.Detect();
+        if (detected is PackageManagerEngine.Yay)
         {
             Engine = PackageManagerEngine.Yay;
+            _notificationService.SendAsync(
+                DetectResultTitleLabel, DetectFoundYayLabel, NotificationLevel.Success).FireAndForget();
+        }
+        else if (detected is PackageManagerEngine.Paru)
+        {
+            _notificationService.SendAsync(
+                DetectResultTitleLabel, DetectFoundParuLabel, NotificationLevel.Info).FireAndForget();
+        }
+        else
+        {
+            _notificationService.SendAsync(
+                DetectResultTitleLabel, DetectFoundNoneLabel, NotificationLevel.Warning).FireAndForget();
         }
     }
 
@@ -323,34 +419,22 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         value.Length == 0 ? value : char.ToUpperInvariant(value[0]) + value[1..];
 
     /// <summary>
-    /// Coalesces rapid successive changes into a single save loop: if a change happens
-    /// while a save is already in flight, it is marked dirty and re-saved (reading the
-    /// then-current values) once the in-flight save finishes, instead of starting a second
-    /// concurrent write to the same file (which both corrupts write ordering and throws
-    /// when two writers race for the same file handle).
+    /// BUGFIX-2026-08: the debounced auto-save evaluation. Compares the current values against
+    /// the last-persisted snapshot and skips the write (and the "Saved" toast) when nothing
+    /// actually changed — load-time binding pushes like the Language ComboBox briefly writing ""
+    /// then the real value collapse inside the 250ms debounce and net out to "no change".
+    /// When something did change, saves once and notifies, exactly like the old immediate path.
     /// </summary>
-    private void TriggerAutoSave()
+    private async Task RunSaveIfChangedAsync()
     {
-        IsSaved = false;
-
-        if (_pendingSave is { IsCompleted: false })
+        var current = ToSettings();
+        if (current.Equals(_lastSavedSettings))
         {
-            _dirtyWhileSaving = true;
             return;
         }
 
-        _pendingSave = RunSaveLoopAsync();
-    }
-
-    private async Task RunSaveLoopAsync()
-    {
-        do
-        {
-            _dirtyWhileSaving = false;
-            await _settingsStore.SaveAsync(ToSettings());
-        }
-        while (_dirtyWhileSaving);
-
+        await _settingsStore.SaveAsync(current);
+        _lastSavedSettings = current;
         IsSaved = true;
 
         // UI-15: "Saved" is a transient toast, not a permanently-visible label — SettingsView no

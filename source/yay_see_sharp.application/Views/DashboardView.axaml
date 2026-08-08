@@ -36,23 +36,25 @@
                 <TextBlock Text="{Binding LastSyncedLabel}" FontSize="25" Foreground="{DynamicResource Brush.TextMuted}" Margin="0,8,0,0"/>
             </StackPanel>
 
-            <Grid ColumnDefinitions="*,*,*" Height="104">
+            <!-- BUGFIX-2026-08: no fixed card height — with the doubled UI font the fixed 104px
+                 clipped longer labels ("Updates available"); cards now grow with their content. -->
+            <Grid ColumnDefinitions="*,*,*">
                 <Border Grid.Column="0" Background="{DynamicResource Brush.Sidebar}" CornerRadius="12" Padding="24,20" Margin="0,0,10,0">
                     <StackPanel>
                         <TextBlock Text="{Binding Statistics.InstalledCount}" FontSize="36" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
-                        <TextBlock Text="{Binding InstalledLabel}" FontSize="22" Foreground="{DynamicResource Brush.TextMuted}"/>
+                        <TextBlock Text="{Binding InstalledLabel}" FontSize="22" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="1" Background="{DynamicResource Brush.Sidebar}" CornerRadius="12" Padding="24,20" Margin="10,0">
                     <StackPanel>
                         <TextBlock Text="{Binding Statistics.AurCount}" FontSize="36" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
-                        <TextBlock Text="{Binding AurLabel}" FontSize="22" Foreground="{DynamicResource Brush.TextMuted}"/>
+                        <TextBlock Text="{Binding AurLabel}" FontSize="22" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Background="{DynamicResource Brush.Sidebar}" CornerRadius="12" Padding="24,20" Margin="10,0,0,0">
                     <StackPanel>
                         <TextBlock Text="{Binding Statistics.UpdatesAvailable}" FontSize="36" FontWeight="Medium" Foreground="{DynamicResource Brush.Accent}"/>
-                        <TextBlock Text="{Binding UpdatesAvailableLabel}" FontSize="22" Foreground="{DynamicResource Brush.TextMuted}"/>
+                        <TextBlock Text="{Binding UpdatesAvailableLabel}" FontSize="22" Foreground="{DynamicResource Brush.TextMuted}" TextWrapping="Wrap"/>
                     </StackPanel>
                 </Border>
             </Grid>

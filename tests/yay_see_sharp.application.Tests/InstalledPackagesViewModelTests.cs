@@ -122,6 +122,47 @@ public class InstalledPackagesViewModelTests
         await Assert.That(viewModel.HasNoPackages).IsFalse();
     }
 
+    // BUGFIX-2026-08: clearing the search box must bring the full installed list back —
+    // the filter no longer gets stuck on a previously selected Official/AUR source.
+    [Test]
+    public async Task Clearing_the_query_restores_all_packages()
+    {
+        var backend = new DemoPackageBackend();
+        var viewModel = new InstalledPackagesViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
+        var target = viewModel.Packages.First();
+
+        viewModel.Query = target.Name;
+        await WaitUntilAsync(
+            () => viewModel.FilteredPackages.Count > 0 && viewModel.FilteredPackages.All(p => p.Name == target.Name),
+            TimeSpan.FromSeconds(2));
+
+        viewModel.Query = string.Empty;
+
+        await WaitUntilAsync(
+            () => viewModel.FilteredPackages.Count == viewModel.Packages.Count,
+            TimeSpan.FromSeconds(2));
+    }
+
+    // BUGFIX-2026-08: switching All → Official → AUR applies immediately (no keystroke needed),
+    // and coming back to All shows everything again.
+    [Test]
+    public async Task Switching_the_source_filter_then_back_to_all_restores_everything()
+    {
+        var backend = new DemoPackageBackend();
+        var viewModel = new InstalledPackagesViewModel(backend, new LocalizationService("en"), Mock.Of<IPkgbuildService>());
+        await Assert.That(viewModel.Packages.Any(p => p.Source == PackageSource.Official)).IsTrue();
+
+        viewModel.SelectedSourceOption = viewModel.SourceOptions.Single(option => option.Value == PackageSource.Official);
+        await WaitUntilAsync(
+            () => viewModel.FilteredPackages.Count > 0 && viewModel.FilteredPackages.All(p => p.Source == PackageSource.Official),
+            TimeSpan.FromSeconds(2));
+
+        viewModel.SelectedSourceOption = viewModel.SourceOptions[0]; // All
+        await WaitUntilAsync(
+            () => viewModel.FilteredPackages.Count == viewModel.Packages.Count,
+            TimeSpan.FromSeconds(2));
+    }
+
     [Test]
     public async Task Selecting_by_name_resets_an_active_filter_that_would_otherwise_hide_the_target()
     {
