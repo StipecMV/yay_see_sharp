@@ -48,3 +48,14 @@ done
 
 Result after this round: **273/273 passing** (7 domain, 150 infrastructure, 104 application, 12 e2e).
 Screenshots in `docs/screenshots/` were regenerated from the fixed UI via `tools/generate-screenshots.sh`.
+
+## Follow-up (same day)
+
+Two issues surfaced when re-checking the Release build and the Installed screen on the live box:
+
+| # | Reported symptom | Root cause | Fix |
+| --- | --- | --- | --- |
+| 14 | Release build warns `CS0618`: `HasCount()` is obsolete | `SettingsViewModelTests.Language_options_are_built_from_available_languages` used the legacy TUnit `HasCount().EqualTo(11)` API | Migrated to the modern `Count().IsEqualTo(11)` — `dotnet build -c Release` is now **0 warnings** |
+| 15 | Installed → **AUR** filter still shows 0 packages (and Dashboard AUR count 0) even though many AUR packages are installed | Follow-up on #13: `yay -Si` exits **non-zero when any requested name is unresolvable** (e.g. a foreign, hand-built package that isn't in the AUR) — but still prints the info blocks for every name it *did* resolve. The chunked confirmation only parsed output when `result.Succeeded`, so **one bad name silently discarded the whole chunk** → AUR packages were classified `Foreign` → invisible under the AUR filter and absent from the count | Confirmation now parses the chunk output **regardless of the exit code** (`ParseAurConfirmedNames` already skips error lines); a chunk with no resolvable blocks contributes nothing. Regression: `PackageBackendTests.Yay_get_installed_classifies_aur_packages_even_when_the_confirmation_chunk_exits_nonzero` |
+
+Verification after the follow-up: **285/285 passing** (7 domain, 162 infrastructure, 104 application, 12 e2e).

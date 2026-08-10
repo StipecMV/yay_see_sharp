@@ -143,7 +143,7 @@ public class SettingsViewModelTests
         await Assert.That(zhTwOption.Label).IsEqualTo("Chinese (Traditional)");
         var japaneseOption = viewModel.LanguageOptions.Single(option => option.Value == "ja");
         await Assert.That(japaneseOption.Label).IsEqualTo("Japanese");
-        await Assert.That(viewModel.LanguageOptions).HasCount().EqualTo(11);
+        await Assert.That(viewModel.LanguageOptions).Count().IsEqualTo(11);
 
         localization.SetLanguage("sk");
 

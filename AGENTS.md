@@ -31,7 +31,7 @@ YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1 dotnet run --project tests/yay_see_sh
 ./tools/generate-screenshots.sh [--theme dark] [--lang sk]
 ```
 
-**Aktuálny stav (2026-08):** 284/284 testov zelených — 7 domain + 161 infrastructure + 104 application + 12 e2e.
+**Aktuálny stav (2026-08):** 285/285 testov zelených — 7 domain + 162 infrastructure + 104 application + 12 e2e.
 **Screenshoty** sa generujú z reálne skompilovanej aplikácie (Demo backend), nie ručne.
 
 ## 3. Architektúra (striktne jednosmerné závislosti)
@@ -53,6 +53,7 @@ yay_see_sharp.domain       (modely + interfacy — ŽIADNE third-party závislos
 ## 4. Čo sme riešili (história)
 
 - **2026-08 bugfix runda** (`0b24a06`) — 13 problémov z testovania Real mode na živom CachyOS: falošný „Saved" toast pri otvorení Settings, 30s→10s toast, Detect hlásil „Saved" namiesto výsledku, vertikálne filtre, stratený filter v Installed, orezané texty po zdvojnásobení fontu, nespoľahlivý `[installed]` marker z yay (fix: krížová kontrola `pacman -Qq`), PKGBUILD modal mimo okna, pomalé prepínanie filtrov (fix: okamžité vyčistenie + spinner), chýbajúca selekcia v Search, dvojité popupy pri chybe (fix: OS notifikácie OFF default), htop z Search neviditeľný v Installed (fix: refresh pri navigácii), zlý AUR count + „Updates available" (fix: chunked `yay -Si` ≤20 mien ≤4 concurrent). Detaily: `docs/bugfixes-2026-08.md`.
+- **2026-08 follow-up** — CS0618 warning v Release (TUnit `HasCount()` → `Count().IsEqualTo()`); AUR konfirmácia parsuje chunk výstup aj pri exit code ≠ 0 (jeden „not in AUR" názov už nezhodí celý chunk → Installed AUR filter aj Dashboard AUR count správne). 285/285 testov.
 - **Lokalizácia DE/PL** — pridané nemecké (de) a poľské (pl) jazykové sady (126 kľúčov každá, plná parita); jazyk sa prepína v Settings ako EN/SK. Testy: `LocalizationServiceTests` (de/pl/fallback), `SettingsViewModelTests` (možnosti jazyka).
 - **Lokalizácia RU/ES/PT/IT/zh-CN/zh-TW/JA** — pridaných 7 jazykových sád (133 kľúčov každá, plná parita generovaná + overená); spolu 11 jazykov. Testy: `LocalizationServiceTests` (7 nových setov), `SettingsViewModelTests` (11 možností jazyka).
 - **Code review findings** (52beea1) — findings z review zapracované; dokument `docs/code-review-findings.md` bol po zapracovaní **odstránený** (ed2ee29), aktuálne žiadny takýto súbor neudržiavaj.

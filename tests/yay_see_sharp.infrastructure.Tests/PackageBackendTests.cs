@@ -548,6 +548,53 @@ public class PackageBackendTests
     }
 
     [Test]
+    public async Task Yay_get_installed_classifies_aur_packages_even_when_the_confirmation_chunk_exits_nonzero()
+    {
+        // BUGFIX-2026-08 (follow-up): `yay -Si -- a b c` exits non-zero when ANY of the requested
+        // names is unresolvable (e.g. a hand-built foreign tool that isn't in the AUR), but the
+        // output still contains the info blocks for every name it DID resolve. The old
+        // "only parse if Succeeded" logic discarded the whole chunk on one bad name, so all AUR
+        // packages became Foreign — the Installed AUR filter and the Dashboard AUR count showed 0
+        // on exactly the systems the app is made for. Regression: a failed chunk must still
+        // confirm the names whose blocks yay printed.
+        var runner = new Mock<ICommandRunner>();
+        var parser = new YayOutputParser();
+        runner.Setup(item => item.RunAsync(
+                It.Is<CommandRequest>(request => request.FileName == "yay" && request.Arguments.SequenceEqual(new[] { "-Q" })),
+                It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(0,
+            [
+                new CommandOutput(CommandOutputKind.StandardOutput, "hello 2.12.1-1", DateTimeOffset.UtcNow),
+                new CommandOutput(CommandOutputKind.StandardOutput, "hello-git 2.12.1.r4-1", DateTimeOffset.UtcNow),
+                new CommandOutput(CommandOutputKind.StandardOutput, "handmade-tool 1.0-1", DateTimeOffset.UtcNow),
+            ], false));
+        SetupPacman(runner, ["-Qm"], 0, "hello-git 2.12.1.r4-1", "handmade-tool 1.0-1");
+
+        // One chunk holds both foreign names; yay resolves hello-git (prints its block) but
+        // fails on handmade-tool — overall exit code 1, yet the resolvable block is present.
+        runner.Setup(item => item.RunAsync(
+                It.Is<CommandRequest>(request =>
+                    request.FileName == "yay" &&
+                    request.Arguments.SequenceEqual(new[] { "-Si", "--", "hello-git", "handmade-tool" })),
+                It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(1,
+            [
+                new CommandOutput(CommandOutputKind.StandardOutput, "Repository : aur", DateTimeOffset.UtcNow),
+                new CommandOutput(CommandOutputKind.StandardOutput, "Name : hello-git", DateTimeOffset.UtcNow),
+                new CommandOutput(CommandOutputKind.StandardOutput, "Version : 2.12.1.r4-1", DateTimeOffset.UtcNow),
+                new CommandOutput(CommandOutputKind.StandardOutput, string.Empty, DateTimeOffset.UtcNow),
+                new CommandOutput(CommandOutputKind.StandardError, "error: package 'handmade-tool' was not found", DateTimeOffset.UtcNow),
+            ], false));
+
+        var backend = new YayPackageBackend(runner.Object, parser);
+        var installed = await backend.GetInstalledPackagesAsync();
+
+        await Assert.That(installed.Single(p => p.Name == "hello-git").Source).IsEqualTo(PackageSource.Aur);
+        await Assert.That(installed.Single(p => p.Name == "handmade-tool").Source).IsEqualTo(PackageSource.Foreign);
+        await Assert.That(installed.Single(p => p.Name == "hello").Source).IsEqualTo(PackageSource.Official);
+    }
+
+    [Test]
     public async Task Yay_install_reports_completion_on_success()
     {
         var runner = new Mock<ICommandRunner>();

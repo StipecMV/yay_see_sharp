@@ -72,6 +72,15 @@ public sealed class PacmanQueryService : IPacmanQueryService
         // degraded to 0/"unknown"). Query in bounded chunks instead, merge whatever each chunk
         // confirmed, and let a chunk failure degrade only that chunk: 0 confirmed from a failed
         // chunk is still an honest "not confirmed", while the rest of the system keeps its data.
+        //
+        // NOTE (2026-08, follow-up): `yay -Si` exits non-zero when ANY requested name is
+        // unresolvable (e.g. a foreign package that isn't in the AUR, like a hand-built tool),
+        // but it still prints the info blocks for every name it DID resolve. Relying on
+        // result.Succeeded to decide whether to parse meant one bad name silently discarded the
+        // whole chunk — AUR packages ended up classified as Foreign, so the Installed AUR filter
+        // showed 0 packages and the Dashboard AUR count showed 0 even on systems with many real
+        // AUR packages installed. The output is now parsed regardless of the exit code; a chunk
+        // that yielded no resolvable blocks simply contributes nothing.
         const int chunkSize = 20;
         const int maxConcurrency = 4;
         var chunks = foreignPackageNames
@@ -98,15 +107,12 @@ public sealed class PacmanQueryService : IPacmanQueryService
         var confirmed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var result in results)
         {
-            if (result.Succeeded)
+            // Defensive: parser implementations (or mocks) may return null instead of an
+            // empty set — never crash the whole AUR count over a missing confirmation list.
+            var parsed = _outputParser.ParseAurConfirmedNames(result.CombinedText);
+            if (parsed is not null)
             {
-                // Defensive: parser implementations (or mocks) may return null instead of an
-                // empty set — never crash the whole AUR count over a missing confirmation list.
-                var parsed = _outputParser.ParseAurConfirmedNames(result.CombinedText);
-                if (parsed is not null)
-                {
-                    confirmed.UnionWith(parsed);
-                }
+                confirmed.UnionWith(parsed);
             }
         }
 
