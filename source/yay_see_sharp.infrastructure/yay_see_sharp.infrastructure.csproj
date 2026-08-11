@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="log4net" />
     <PackageReference Include="Splat" />
   </ItemGroup>
 

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Reactive;
+using log4net;
 using ReactiveUI;
 using yay_see_sharp.application.Platform;
 using yay_see_sharp.domain.Abstractions;
@@ -15,6 +16,7 @@ namespace yay_see_sharp.application.ViewModels;
 /// </summary>
 public class MainWindowViewModel : LocalizedViewModelBase
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(MainWindowViewModel));
     private NavigationItemViewModel _selectedNavigationItem;
     private ViewModelBase _currentPage;
     private AuthPromptViewModel? _authPrompt;
@@ -81,6 +83,7 @@ public class MainWindowViewModel : LocalizedViewModelBase
         this.WhenAnyValue(x => x.SelectedNavigationItem)
             .Subscribe(item =>
             {
+                Log.Info($"Navigation: {item.Section}");
                 CurrentPage = ResolvePage(item);
                 if (item.Section == NavigationSection.Installed)
                 {

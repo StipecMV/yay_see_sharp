@@ -1,3 +1,4 @@
+using log4net;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.infrastructure.Process;
 
@@ -5,6 +6,7 @@ namespace yay_see_sharp.infrastructure.Yay;
 
 public sealed class PacmanQueryService : IPacmanQueryService
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(PacmanQueryService));
     private readonly ICommandRunner _commandRunner;
     private readonly IYayOutputParser _outputParser;
 
@@ -34,7 +36,7 @@ public sealed class PacmanQueryService : IPacmanQueryService
         var updatesAvailable = await InterpretFilteredCountAsync(["-Qu"], cancellationToken);
         var installedSizeBytes = await GetInstalledSizeBytesAsync(cancellationToken);
 
-        return new PackageStatistics(
+        var statistics = new PackageStatistics(
             installedCount,
             explicitCount,
             dependencyCount,
@@ -43,6 +45,8 @@ public sealed class PacmanQueryService : IPacmanQueryService
             installedSizeBytes,
             orphanCount,
             LastUpdateCheck: null);
+        Log.Info($"Statistics: installed={installedCount} explicit={explicitCount} deps={dependencyCount} aur={aurCount?.ToString() ?? "?"} updates={updatesAvailable?.ToString() ?? "?"} orphans={orphanCount?.ToString() ?? "?"} size={(installedSizeBytes is null ? "?" : $"{installedSizeBytes / (1024.0 * 1024.0):F1} MiB")}");
+        return statistics;
     }
 
     public async Task<IReadOnlySet<string>> GetForeignPackageNamesAsync(CancellationToken cancellationToken = default)
@@ -107,6 +111,11 @@ public sealed class PacmanQueryService : IPacmanQueryService
         var confirmed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var result in results)
         {
+            if (!result.Succeeded && result.ExitCode != 0)
+            {
+                Log.Warn($"AUR confirmation chunk exited {result.ExitCode} — parsing its partial output for resolvable names");
+            }
+
             // Defensive: parser implementations (or mocks) may return null instead of an
             // empty set — never crash the whole AUR count over a missing confirmation list.
             var parsed = _outputParser.ParseAurConfirmedNames(result.CombinedText);
@@ -116,6 +125,7 @@ public sealed class PacmanQueryService : IPacmanQueryService
             }
         }
 
+        Log.Info($"AUR confirmation: {confirmed.Count} of {foreignPackageNames.Count} foreign name(s) confirmed against AUR");
         return confirmed;
     }
 

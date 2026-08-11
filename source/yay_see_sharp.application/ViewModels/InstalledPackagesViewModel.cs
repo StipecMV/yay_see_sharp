@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
+using log4net;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
@@ -10,6 +11,7 @@ namespace yay_see_sharp.application.ViewModels;
 
 public class InstalledPackagesViewModel : LocalizedViewModelBase
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(InstalledPackagesViewModel));
     private readonly IPackageBackend _backend;
     private readonly IPkgbuildService _pkgbuildService;
     private readonly IUninstallPolicy? _uninstallPolicy;
@@ -190,10 +192,12 @@ public class InstalledPackagesViewModel : LocalizedViewModelBase
 
             this.RaisePropertyChanged(nameof(HasNoPackages));
             ApplyFilter();
+            Log.Info($"Installed list refreshed: {Packages.Count} package(s)");
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            Log.Error("Installed list refresh failed", ex);
         }
         finally
         {

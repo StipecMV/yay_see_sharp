@@ -1,3 +1,4 @@
+using log4net;
 using yay_see_sharp.application.Platform;
 using yay_see_sharp.application.ViewModels;
 using yay_see_sharp.domain.Abstractions;
@@ -36,12 +37,15 @@ public sealed class AppComposition
 /// </summary>
 public static class AppBootstrapper
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(AppBootstrapper));
+
     /// <summary>Returns null when this process should not start a second instance (see <see cref="ISingleInstanceService"/>).</summary>
     public static AppComposition? Bootstrap()
     {
         var singleInstanceService = new FileLockSingleInstanceService();
         if (!singleInstanceService.TryAcquire())
         {
+            Log.Info("Another instance is already running — activating it and exiting this process");
             // Best-effort: ask the already-running instance to restore/focus itself before this
             // second launch exits. A false return (nothing listening) is not itself an error —
             // this process still must not start a second session either way.
@@ -49,9 +53,11 @@ public static class AppBootstrapper
             return null;
         }
 
+        Log.Info("Single instance lock acquired — this is the primary instance");
         var settingsStore = new FileSettingsStore();
         var settings = Task.Run(() => settingsStore.LoadAsync()).GetAwaiter().GetResult();
         var localizationService = new LocalizationService(settings.Language);
+        Log.Info($"Loaded settings: language={settings.Language}, theme={settings.Theme}, notificationsEnabled={settings.NotificationsEnabled}, autoUpdateCheck={settings.AutoUpdateCheckEnabled}");
 
         // Every concrete Infrastructure service a ViewModel needs is constructed here, once, and
         // handed down via constructor — ViewModels themselves never `new` one up as a hidden

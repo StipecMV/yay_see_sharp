@@ -1,3 +1,4 @@
+using log4net;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 using yay_see_sharp.domain.Scheduling;
@@ -12,6 +13,7 @@ namespace yay_see_sharp.infrastructure.Scheduling;
 /// </summary>
 public sealed class UpdateScheduler : IUpdateScheduler
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(UpdateScheduler));
     private readonly IClock _clock;
     private readonly IPackageBackend _backend;
     private readonly IUpdateScheduleSettings _settings;
@@ -46,6 +48,7 @@ public sealed class UpdateScheduler : IUpdateScheduler
             return Task.CompletedTask;
         }
 
+        Log.Info("Update scheduler started");
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _loopTask = Task.Run(() => RunLoopAsync(_cts.Token), CancellationToken.None);
         return Task.CompletedTask;
@@ -64,6 +67,7 @@ public sealed class UpdateScheduler : IUpdateScheduler
         _loopTask = null;
         NextScheduledRun = null;
 
+        Log.Info("Update scheduler stopped");
         await cts.CancelAsync();
         try
         {
@@ -92,11 +96,17 @@ public sealed class UpdateScheduler : IUpdateScheduler
         try
         {
             var updates = await _backend.GetUpdatesAsync(cancellationToken);
+            Log.Info($"Update check finished: {updates.Count} update(s) available");
             if (updates.Count > 0 && OnUpdatesFound is { } handler)
             {
                 await handler(updates);
             }
 
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Log.Error("Update check failed", exception);
             return true;
         }
         finally

@@ -1,10 +1,13 @@
 using DiagnosticsProcess = System.Diagnostics.Process;
 using DiagnosticsProcessStartInfo = System.Diagnostics.ProcessStartInfo;
+using log4net;
 
 namespace yay_see_sharp.infrastructure.Process;
 
 public sealed class SystemCommandRunner : ICommandRunner
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(SystemCommandRunner));
+
     public async Task<CommandResult> RunAsync(
         CommandRequest request,
         IProgress<CommandOutput>? progress = null,
@@ -14,6 +17,10 @@ public sealed class SystemCommandRunner : ICommandRunner
         {
             throw new ArgumentException("A command filename is required.", nameof(request));
         }
+
+        var startTime = DateTimeOffset.UtcNow;
+        var displayArguments = string.Join(" ", request.Arguments);
+        Log.Info($"RUN  {request.FileName} {displayArguments}");
 
         var startInfo = new DiagnosticsProcessStartInfo
         {
@@ -46,6 +53,7 @@ public sealed class SystemCommandRunner : ICommandRunner
 
         if (!process.Start())
         {
+            Log.Error($"START FAILED {request.FileName} {displayArguments} — process.Start() returned false");
             throw new InvalidOperationException($"Could not start command '{request.FileName}'.");
         }
 
@@ -80,7 +88,28 @@ public sealed class SystemCommandRunner : ICommandRunner
                 IgnoreCancellationAsync(stderrTask));
         }
 
-        return new CommandResult(process.HasExited ? process.ExitCode : -1, output, wasCancelled);
+        var result = new CommandResult(process.HasExited ? process.ExitCode : -1, output, wasCancelled);
+        var duration = DateTimeOffset.UtcNow - startTime;
+        if (wasCancelled)
+        {
+            Log.Warn($"CANCEL {request.FileName} {displayArguments} after {duration.TotalSeconds:F1}s");
+        }
+        else if (result.Succeeded)
+        {
+            Log.Info($"OK    {request.FileName} {displayArguments} — exit {result.ExitCode} in {duration.TotalSeconds:F1}s");
+        }
+        else
+        {
+            // Failure diagnostics: the last few lines of output are what actually tells the
+            // user (and us) why a yay/pacman call failed.
+            var tail = result.CombinedText
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .TakeLast(5);
+            Log.Warn($"FAIL  {request.FileName} {displayArguments} — exit {result.ExitCode} in {duration.TotalSeconds:F1}s" +
+                     Environment.NewLine + string.Join(Environment.NewLine, tail));
+        }
+
+        return result;
     }
 
     private static void TryTerminate(DiagnosticsProcess process)

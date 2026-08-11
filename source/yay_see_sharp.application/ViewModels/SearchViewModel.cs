@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
+using log4net;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
@@ -10,6 +11,7 @@ namespace yay_see_sharp.application.ViewModels;
 
 public class SearchViewModel : LocalizedViewModelBase
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(SearchViewModel));
     /// <summary>UI-08: shown as search results whenever the query is empty, so the screen is never just a blank box — Demo mode only shows the ones present in its own catalog; Real mode searches for all of them via the real backend.</summary>
     private static readonly string[] RecommendedPackageNames =
     [
@@ -215,12 +217,15 @@ public class SearchViewModel : LocalizedViewModelBase
         ErrorMessage = null;
         try
         {
+            var start = DateTimeOffset.UtcNow;
             var results = await _backend.SearchAsync(Query, SourceFilter);
             RepopulateResults(results);
+            Log.Info($"Search '{Query}' (source={SourceFilter?.ToString() ?? "all"}): {results.Count} result(s) in {(DateTimeOffset.UtcNow - start).TotalSeconds:F1}s");
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            Log.Error($"Search '{Query}' failed", ex);
         }
         finally
         {

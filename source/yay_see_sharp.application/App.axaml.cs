@@ -4,6 +4,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using log4net;
 using ReactiveUI;
 using yay_see_sharp.application.Platform;
 using yay_see_sharp.application.ViewModels;
@@ -16,12 +17,25 @@ namespace yay_see_sharp.application
 {
     public partial class App : Application
     {
+        private static readonly ILog Log = LogManager.GetLogger(typeof(App));
         private ISingleInstanceService? _singleInstanceService;
         private AvaloniaTrayService? _trayService;
         private UpdateScheduler? _updateScheduler;
 
         public override void Initialize()
         {
+            Log.Info("Avalonia application initializing");
+
+            // Global safety net: an exception escaping a background task or an event handler
+            // must never vanish silently — log it so a crash is diagnosable from the log file.
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+                Log.Fatal("Unhandled AppDomain exception", e.ExceptionObject as Exception);
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+            {
+                Log.Error("Unobserved task exception", e.Exception);
+                e.SetObserved();
+            };
+
             AvaloniaXamlLoader.Load(this);
         }
 

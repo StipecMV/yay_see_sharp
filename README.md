@@ -105,6 +105,23 @@ for p in domain infrastructure application integration e2e; do
 done
 ```
 
+## Logging
+
+The app writes a **log4net** log file for every run — no config file needed, the file appender is
+configured in code at startup (`Program.Main`). Everything that matters for debugging goes there:
+process start (version/OS/PID), backend selection, every `yay`/`pacman` command with exit code
+and duration (plus the output tail on failure), settings load/save, language changes, package
+operations (install/uninstall/update), PKGBUILD fetches, elevation outcomes, toasts, and
+unhandled/unobserved exceptions. Splat/ReactiveUI internals are routed to the same file.
+
+- **Location:** `~/.config/yay_see_sharp/logs/yay-see-sharp-<start>-<pid>.log` (same app-data
+  directory as `settings.json`)
+- **Rotation, per run:** one fresh file per run; at **10 MB** it rolls to a second segment
+  (`<name>.1`); a run never holds more than two files — when a third segment would start, the
+  oldest is deleted. Previous runs' files are left in place.
+- **Level:** INFO by default (WARN/ERROR included); DEBUG messages exist in a few hot paths but
+  are filtered out unless the root level is lowered.
+
 ## Contributing
 
 Issues and pull requests are welcome. Please keep changes scoped to one architectural layer where possible (see [Architecture](#architecture)), add tests in the matching project from the table above, and make sure `dotnet build yay_see_sharp.slnx` stays clean before opening a PR.

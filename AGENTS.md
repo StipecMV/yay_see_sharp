@@ -54,6 +54,7 @@ yay_see_sharp.domain       (modely + interfacy — ŽIADNE third-party závislos
 
 - **2026-08 bugfix runda** (`0b24a06`) — 13 problémov z testovania Real mode na živom CachyOS: falošný „Saved" toast pri otvorení Settings, 30s→10s toast, Detect hlásil „Saved" namiesto výsledku, vertikálne filtre, stratený filter v Installed, orezané texty po zdvojnásobení fontu, nespoľahlivý `[installed]` marker z yay (fix: krížová kontrola `pacman -Qq`), PKGBUILD modal mimo okna, pomalé prepínanie filtrov (fix: okamžité vyčistenie + spinner), chýbajúca selekcia v Search, dvojité popupy pri chybe (fix: OS notifikácie OFF default), htop z Search neviditeľný v Installed (fix: refresh pri navigácii), zlý AUR count + „Updates available" (fix: chunked `yay -Si` ≤20 mien ≤4 concurrent). Detaily: `docs/bugfixes-2026-08.md`.
 - **2026-08 follow-up** — CS0618 warning v Release (TUnit `HasCount()` → `Count().IsEqualTo()`); AUR konfirmácia parsuje chunk výstup aj pri exit code ≠ 0 (jeden „not in AUR" názov už nezhodí celý chunk → Installed AUR filter aj Dashboard AUR count správne). 285/285 testov.
+- **Logovanie (log4net)** — súborový logger pre celú appku (infra aj application vrstva): per-run súbor `~/.config/yay_see_sharp/logs/yay-see-sharp-<start>-<pid>.log`, 10 MB na segment, max 2 súbory na beh (pri 3. segmente sa maže najstarší); logujú sa príkazy yay/pacman (exit code, trvanie, tail pri chybe), výber backendu, settings, operácie, výnimky; Splat/ReactiveUI logy tiež do súboru; log4net konfigurácia v kóde (`Logging/LoggingSetup.cs`), žiadny XML config.
 - **Lokalizácia DE/PL** — pridané nemecké (de) a poľské (pl) jazykové sady (126 kľúčov každá, plná parita); jazyk sa prepína v Settings ako EN/SK. Testy: `LocalizationServiceTests` (de/pl/fallback), `SettingsViewModelTests` (možnosti jazyka).
 - **Lokalizácia RU/ES/PT/IT/zh-CN/zh-TW/JA** — pridaných 7 jazykových sád (133 kľúčov každá, plná parita generovaná + overená); spolu 11 jazykov. Testy: `LocalizationServiceTests` (7 nových setov), `SettingsViewModelTests` (11 možností jazyka).
 - **Code review findings** (52beea1) — findings z review zapracované; dokument `docs/code-review-findings.md` bol po zapracovaní **odstránený** (ed2ee29), aktuálne žiadny takýto súbor neudržiavaj.
@@ -71,6 +72,7 @@ yay_see_sharp.domain       (modely + interfacy — ŽIADNE third-party závislos
 | Lokalizácia cez dictionary, nie `.resx` | ✅ potvrdené |
 | OS-level notifikácie (notify-send) **OFF by default** (opt-in v Settings); in-app toasty vždy zapnuté, auto-dismiss **10 s** | ✅ po bugfix runde |
 | Auto-save v Settings: debounced 250 ms + diff proti poslednej uloženej hodnote → „Saved" toast LEN pri reálnej zmene | ✅ po bugfix runde |
+| Súborový logger: log4net (per-run súbor, 10 MB segment, max 2 súbory/beh), `~/.config/yay_see_sharp/logs/` | ✅ 2026-08 |
 | Žiadne manuálne „Refresh" buttony — obrazovky sa auto-refreshujú po operácii a pri navigácii | ✅ potvrdené |
 | Sudo: `sudo -v` refresh, heslo NIKDY v argv, logoch ani na disku; potvrdenie pred privilegovanými akciami | ✅ potvrdené |
 | Close = hide do tray (konfigurovateľné); single instance (druhý štart aktivuje existujúcu) | ✅ potvrdené |

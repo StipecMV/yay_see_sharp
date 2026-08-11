@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reactive;
 using System.Reactive.Linq;
+using log4net;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
@@ -10,6 +11,7 @@ namespace yay_see_sharp.application.ViewModels;
 
 public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpdateScheduleSettings, INotificationSettings, IBuildDirectoryPolicy
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(SettingsViewModel));
     private readonly ISettingsStore _settingsStore;
     private readonly IEngineDetector _engineDetector;
     private readonly INotificationService _notificationService;
@@ -371,6 +373,7 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         // toast instead of actually invoking IEngineDetector.
         if (_backendMode != BackendMode.Real)
         {
+            Log.Info($"Detect engine: skipped (backend mode is {_backendMode}, not Real)");
             _notificationService.SendAsync(
                 Localization.GetString("Settings.SimulatedModeTitle"),
                 Localization.GetString("Settings.SimulatedModeDetect"),
@@ -430,9 +433,11 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         var current = ToSettings();
         if (current.Equals(_lastSavedSettings))
         {
+            Log.Debug("Auto-save evaluation: nothing changed — skipping save and toast");
             return;
         }
 
+        Log.Info($"Settings change detected — saving (language={current.Language}, theme={current.Theme})");
         await _settingsStore.SaveAsync(current);
         _lastSavedSettings = current;
         IsSaved = true;

@@ -1,3 +1,4 @@
+using log4net;
 using yay_see_sharp.domain.Models;
 
 namespace yay_see_sharp.infrastructure.Platform;
@@ -18,6 +19,7 @@ public interface IDistributionDetector
 
 public sealed class LinuxDistributionDetector : IDistributionDetector
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(LinuxDistributionDetector));
     private readonly string _osReleasePath;
     private readonly IReadOnlyDictionary<string, string> _environment;
 
@@ -47,7 +49,9 @@ public sealed class LinuxDistributionDetector : IDistributionDetector
         var name = values.GetValueOrDefault("PRETTY_NAME", id);
         var desktop = FirstEnvironmentValue("XDG_CURRENT_DESKTOP", "unknown");
         var session = FirstEnvironmentValue("XDG_SESSION_TYPE", "unknown");
-        return new DistributionSnapshot(id, name, desktop, session);
+        var snapshot = new DistributionSnapshot(id, name, desktop, session);
+        Log.Info($"Distribution detected: id={snapshot.Id} name={snapshot.Name} desktop={snapshot.DesktopEnvironment} session={snapshot.SessionType}");
+        return snapshot;
     }
 
     public BackendInfo CreateBackendInfo(DistributionSnapshot distribution, bool yayAvailable)

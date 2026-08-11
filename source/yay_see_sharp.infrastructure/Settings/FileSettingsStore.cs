@@ -1,4 +1,5 @@
 using System.Text.Json;
+using log4net;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 
@@ -6,6 +7,7 @@ namespace yay_see_sharp.infrastructure.Settings;
 
 public sealed class FileSettingsStore : ISettingsStore
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(FileSettingsStore));
     private static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
 
     private readonly string _filePath;
@@ -22,12 +24,28 @@ public sealed class FileSettingsStore : ISettingsStore
     {
         if (!File.Exists(_filePath))
         {
+            Log.Info($"Settings file {_filePath} does not exist — using defaults");
             return AppSettings.Default;
         }
 
-        await using var stream = File.OpenRead(_filePath);
-        var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, SerializerOptions, cancellationToken);
-        return settings ?? AppSettings.Default;
+        try
+        {
+            await using var stream = File.OpenRead(_filePath);
+            var settings = await JsonSerializer.DeserializeAsync<AppSettings>(stream, SerializerOptions, cancellationToken);
+            if (settings is null)
+            {
+                Log.Warn($"Settings file {_filePath} parsed to null — using defaults");
+                return AppSettings.Default;
+            }
+
+            Log.Info($"Settings loaded from {_filePath} (language={settings.Language}, theme={settings.Theme})");
+            return settings;
+        }
+        catch (Exception exception)
+        {
+            Log.Warn($"Settings file {_filePath} could not be read ({exception.Message}) — using defaults");
+            return AppSettings.Default;
+        }
     }
 
     public async Task SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
@@ -40,5 +58,6 @@ public sealed class FileSettingsStore : ISettingsStore
 
         await using var stream = File.Create(_filePath);
         await JsonSerializer.SerializeAsync(stream, settings, SerializerOptions, cancellationToken);
+        Log.Info($"Settings saved to {_filePath}");
     }
 }

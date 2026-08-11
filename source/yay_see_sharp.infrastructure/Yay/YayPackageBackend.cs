@@ -1,3 +1,4 @@
+using log4net;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.infrastructure.Privilege;
 using yay_see_sharp.infrastructure.Process;
@@ -7,6 +8,7 @@ namespace yay_see_sharp.infrastructure.Yay;
 
 public sealed class YayPackageBackend : IPackageBackend
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(YayPackageBackend));
     private readonly ICommandRunner _commandRunner;
     private readonly IYayOutputParser _outputParser;
     private readonly IPrivilegeService? _privilegeService;
@@ -127,9 +129,11 @@ public sealed class YayPackageBackend : IPackageBackend
                 .ToArray();
         }
 
-        return source is null
+        var filtered = source is null
             ? packages
             : packages.Where(package => package.Source == source).ToArray();
+        Log.Info($"Search '{trimmedQuery}' (source={source?.ToString() ?? "all"}): {filtered.Count} result(s)");
+        return filtered;
     }
 
     private async Task<IReadOnlySet<string>?> ReadInstalledNamesAsync(CancellationToken cancellationToken)
@@ -182,6 +186,7 @@ public sealed class YayPackageBackend : IPackageBackend
             cancellationToken: cancellationToken);
         if (installed.Succeeded)
         {
+            Log.Info($"Details for '{trimmed}' from local database (yay -Qi)");
             return _outputParser.ParseInfo(installed.CombinedText);
         }
 
@@ -190,13 +195,21 @@ public sealed class YayPackageBackend : IPackageBackend
             cancellationToken: cancellationToken);
         if (official.Succeeded)
         {
+            Log.Info($"Details for '{trimmed}' from sync database (yay -Si)");
             return _outputParser.ParseInfo(official.CombinedText, PackageSource.Official);
         }
 
         var aur = await _commandRunner.RunAsync(
             new CommandRequest("yay", ["-Sia", trimmed]),
             cancellationToken: cancellationToken);
-        return aur.Succeeded ? _outputParser.ParseInfo(aur.CombinedText, PackageSource.Aur) : null;
+        if (aur.Succeeded)
+        {
+            Log.Info($"Details for '{trimmed}' from AUR (yay -Sia)");
+            return _outputParser.ParseInfo(aur.CombinedText, PackageSource.Aur);
+        }
+
+        Log.Warn($"Details for '{trimmed}': no source had information (exit codes: -Qi={installed.ExitCode}, -Si={official.ExitCode}, -Sia={aur.ExitCode})");
+        return null;
     }
 
     public async Task<PackageStatistics> GetStatisticsAsync(
@@ -221,6 +234,7 @@ public sealed class YayPackageBackend : IPackageBackend
         if (result.ExitCode == 1 && !result.WasCancelled)
         {
             _lastUpdateCheck = DateTimeOffset.UtcNow;
+            Log.Info("Update check: no updates available");
             return Array.Empty<UpdateInfo>();
         }
 
@@ -233,7 +247,9 @@ public sealed class YayPackageBackend : IPackageBackend
         var foreignNames = await _pacmanQueryService.GetForeignPackageNamesAsync(cancellationToken);
         var confirmedAurNames = await _pacmanQueryService.GetConfirmedAurPackageNamesAsync(foreignNames, cancellationToken);
         _lastUpdateCheck = DateTimeOffset.UtcNow;
-        return _outputParser.ParseUpdates(result.CombinedText, foreignNames, confirmedAurNames);
+        var updates = _outputParser.ParseUpdates(result.CombinedText, foreignNames, confirmedAurNames);
+        Log.Info($"Update check: {updates.Count} update(s) available");
+        return updates;
     }
 
     public async Task<IReadOnlyList<PackageSummary>> GetInstalledPackagesAsync(
@@ -251,7 +267,9 @@ public sealed class YayPackageBackend : IPackageBackend
 
         var foreignNames = await _pacmanQueryService.GetForeignPackageNamesAsync(cancellationToken);
         var confirmedAurNames = await _pacmanQueryService.GetConfirmedAurPackageNamesAsync(foreignNames, cancellationToken);
-        return _outputParser.ParseInstalled(result.CombinedText, foreignNames, confirmedAurNames);
+        var installed = _outputParser.ParseInstalled(result.CombinedText, foreignNames, confirmedAurNames);
+        Log.Info($"Installed packages: {installed.Count} total ({confirmedAurNames.Count} confirmed AUR / {foreignNames.Count} foreign)");
+        return installed;
     }
 
     public async IAsyncEnumerable<PackageOperationProgress> InstallAsync(
@@ -304,6 +322,7 @@ public sealed class YayPackageBackend : IPackageBackend
             ? "yay --needed --noconfirm -S <package>"
             : $"yay --needed --noconfirm --builddir {buildDirectory} -S <package>";
 
+        Log.Info($"Install starting: {trimmedName}");
         yield return new PackageOperationProgress(
             PackageOperationKind.Install,
             PackageOperationStage.Preparing,
@@ -335,16 +354,19 @@ public sealed class YayPackageBackend : IPackageBackend
 
         if (!result.Succeeded)
         {
+            var message = FormatFailure("Installation", result.ExitCode, result.CombinedText);
+            Log.Warn($"Install failed: {trimmedName} — {message}");
             yield return new PackageOperationProgress(
                 PackageOperationKind.Install,
                 PackageOperationStage.Failed,
                 0,
-                FormatFailure("Installation", result.ExitCode, result.CombinedText),
+                message,
                 displayCommand,
                 result.CombinedText);
             yield break;
         }
 
+        Log.Info($"Install completed: {trimmedName}");
         yield return new PackageOperationProgress(
             PackageOperationKind.Install,
             PackageOperationStage.Completed,
@@ -382,6 +404,7 @@ public sealed class YayPackageBackend : IPackageBackend
         var removeFlag = removeOrphans ? "-Rns" : "-Rn";
         var displayCommand = $"yay --noconfirm {removeFlag} <package>";
 
+        Log.Info($"Uninstall starting: {packageName.Trim()} (removeOrphans={removeOrphans})");
         yield return new PackageOperationProgress(
             PackageOperationKind.Uninstall,
             PackageOperationStage.Preparing,
@@ -413,16 +436,19 @@ public sealed class YayPackageBackend : IPackageBackend
 
         if (!result.Succeeded)
         {
+            var message = FormatFailure("Removal", result.ExitCode, result.CombinedText);
+            Log.Warn($"Uninstall failed: {packageName.Trim()} — {message}");
             yield return new PackageOperationProgress(
                 PackageOperationKind.Uninstall,
                 PackageOperationStage.Failed,
                 0,
-                FormatFailure("Removal", result.ExitCode, result.CombinedText),
+                message,
                 displayCommand,
                 result.CombinedText);
             yield break;
         }
 
+        Log.Info($"Uninstall completed: {packageName.Trim()}");
         yield return new PackageOperationProgress(
             PackageOperationKind.Uninstall,
             PackageOperationStage.Completed,
@@ -493,6 +519,9 @@ public sealed class YayPackageBackend : IPackageBackend
                 : $"yay -S --noconfirm --needed --builddir {buildDirectory} <packages>";
         }
 
+        Log.Info(trimmedNames.Length == 0
+            ? "Update starting: all packages"
+            : $"Update starting: {trimmedNames.Length} package(s) ({string.Join(", ", trimmedNames.Take(5))}{(trimmedNames.Length > 5 ? ", ..." : "")})");
         yield return new PackageOperationProgress(
             PackageOperationKind.Update,
             PackageOperationStage.Preparing,
@@ -514,6 +543,7 @@ public sealed class YayPackageBackend : IPackageBackend
 
         if (result.WasCancelled)
         {
+            Log.Warn("Update cancelled by the user");
             yield return new PackageOperationProgress(
                 PackageOperationKind.Update,
                 PackageOperationStage.Cancelled,
@@ -526,16 +556,19 @@ public sealed class YayPackageBackend : IPackageBackend
 
         if (!result.Succeeded)
         {
+            var message = FormatFailure("Update", result.ExitCode, result.CombinedText);
+            Log.Warn($"Update failed — {message}");
             yield return new PackageOperationProgress(
                 PackageOperationKind.Update,
                 PackageOperationStage.Failed,
                 0,
-                FormatFailure("Update", result.ExitCode, result.CombinedText),
+                message,
                 displayCommand,
                 result.CombinedText);
             yield break;
         }
 
+        Log.Info("Update completed");
         yield return new PackageOperationProgress(
             PackageOperationKind.Update,
             PackageOperationStage.Completed,

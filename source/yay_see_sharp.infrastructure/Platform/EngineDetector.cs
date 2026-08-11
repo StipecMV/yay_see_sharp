@@ -1,3 +1,4 @@
+using log4net;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 
@@ -5,6 +6,7 @@ namespace yay_see_sharp.infrastructure.Platform;
 
 public sealed class EngineDetector : IEngineDetector
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(EngineDetector));
     private readonly IReadOnlyList<string> _searchPaths;
 
     public EngineDetector(string? pathEnvironmentVariable = null)
@@ -17,14 +19,17 @@ public sealed class EngineDetector : IEngineDetector
     {
         if (IsOnPath("yay"))
         {
+            Log.Info("Engine detection: yay found on PATH");
             return PackageManagerEngine.Yay;
         }
 
         if (IsOnPath("paru"))
         {
+            Log.Info("Engine detection: paru found on PATH (not supported as a backend yet)");
             return PackageManagerEngine.Paru;
         }
 
+        Log.Info("Engine detection: neither yay nor paru found on PATH");
         return null;
     }
 

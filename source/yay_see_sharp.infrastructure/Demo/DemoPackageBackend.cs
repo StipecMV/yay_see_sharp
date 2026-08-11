@@ -1,3 +1,4 @@
+using log4net;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 
@@ -5,6 +6,7 @@ namespace yay_see_sharp.infrastructure.Demo;
 
 public sealed class DemoPackageBackend : IPackageBackend
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(DemoPackageBackend));
     private sealed class DemoPackage
     {
         public required string Name { get; init; }
@@ -55,6 +57,7 @@ public sealed class DemoPackageBackend : IPackageBackend
             .OrderBy(package => package.Name)
             .Select(ToSummary)
             .ToArray();
+        Log.Info($"Demo search '{normalized}' (source={source?.ToString() ?? "all"}): {results.Length} result(s)");
         return Task.FromResult<IReadOnlyList<PackageSummary>>(results);
     }
 
@@ -91,6 +94,7 @@ public sealed class DemoPackageBackend : IPackageBackend
         var installed = _packages.Values.Where(package => package.Installed).ToArray();
         var updates = installed.Count(package => package.Version != package.AvailableVersion);
         var orphans = installed.Count(IsOrphan);
+        Log.Info($"Demo statistics: installed={installed.Length} aur={installed.Count(package => package.Source == PackageSource.Aur)} updates={updates} orphans={orphans}");
         return Task.FromResult(new PackageStatistics(
             installed.Length,
             installed.Count(package => package.Explicit),
@@ -127,6 +131,7 @@ public sealed class DemoPackageBackend : IPackageBackend
             .OrderBy(package => package.Name)
             .Select(ToSummary)
             .ToArray();
+        Log.Info($"Demo installed packages: {installed.Length}");
         return Task.FromResult<IReadOnlyList<PackageSummary>>(installed);
     }
 
@@ -137,10 +142,12 @@ public sealed class DemoPackageBackend : IPackageBackend
         var package = Find(packageName);
         if (package is null)
         {
+            Log.Warn($"Demo install: package '{packageName}' was not found");
             yield return Progress(PackageOperationKind.Install, PackageOperationStage.Failed, 0, $"Package '{packageName}' was not found.");
             yield break;
         }
 
+        Log.Info($"Demo install starting: {package.Name}");
         yield return Progress(PackageOperationKind.Install, PackageOperationStage.Preparing, 10, $"Preparing {package.Name}");
 
         if (!await TryDelayAsync(20, cancellationToken))

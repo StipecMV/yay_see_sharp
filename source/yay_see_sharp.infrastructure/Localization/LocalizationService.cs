@@ -1,4 +1,5 @@
 using System.Globalization;
+using log4net;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.infrastructure.Resources;
 
@@ -6,11 +7,13 @@ namespace yay_see_sharp.infrastructure.Localization;
 
 public sealed class LocalizationService : ILocalizationService
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(LocalizationService));
     private string _language;
 
     public LocalizationService(string? language = null)
     {
         _language = Normalize(language ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+        Log.Info($"Localization initialized with language '{_language}' (requested: '{language ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName}')");
     }
 
     public event EventHandler? LanguageChanged;
@@ -27,6 +30,7 @@ public sealed class LocalizationService : ILocalizationService
             return;
         }
 
+        Log.Info($"Language changed: '{_language}' -> '{normalized}'");
         _language = normalized;
         LanguageChanged?.Invoke(this, EventArgs.Empty);
     }

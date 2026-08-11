@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Reactive;
+using log4net;
 using ReactiveUI;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
@@ -8,6 +9,7 @@ namespace yay_see_sharp.application.ViewModels;
 
 public class DashboardViewModel : LocalizedViewModelBase
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(DashboardViewModel));
     private readonly IPackageBackend _backend;
     private readonly INotificationService _notificationService;
     private PackageStatistics? _statistics;
@@ -175,10 +177,12 @@ public class DashboardViewModel : LocalizedViewModelBase
             // `yay -Qu` (repo + AUR) — on a system with AUR packages the two disagreed. The
             // count now always mirrors the list that's actually rendered.
             Statistics = statistics with { UpdatesAvailable = Updates.Count };
+            Log.Info($"Dashboard refreshed: installed={statistics.InstalledCount} aur={statistics.AurCount?.ToString() ?? "?"} updates={Updates.Count}");
         }
         catch (Exception ex)
         {
             ErrorMessage = ex.Message;
+            Log.Error("Dashboard refresh failed", ex);
         }
         finally
         {

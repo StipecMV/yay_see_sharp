@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
+using log4net;
 using yay_see_sharp.application.ViewModels;
 using yay_see_sharp.domain.Abstractions;
 
@@ -13,6 +14,8 @@ namespace yay_see_sharp.application.Platform;
 /// </summary>
 public sealed class ToastService : INotificationService
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(ToastService));
+
     // BUGFIX-2026-08: 30s was far too long for an in-app toast — it lingered long after the
     // user had already read it (and stacked toasts made it feel like ~1 minute). 10s keeps it
     // visible long enough to read while staying out of the way.
@@ -26,6 +29,7 @@ public sealed class ToastService : INotificationService
         NotificationLevel level = NotificationLevel.Info,
         CancellationToken cancellationToken = default)
     {
+        Log.Info($"Toast: [{level}] {title}{(string.IsNullOrWhiteSpace(body) ? string.Empty : $" — {body}")}");
         // SendAsync can be called from any thread (background operations, the scheduler, ...) but
         // Toasts is bound directly to the UI — every mutation must happen on the UI thread.
         Dispatcher.UIThread.Post(() =>

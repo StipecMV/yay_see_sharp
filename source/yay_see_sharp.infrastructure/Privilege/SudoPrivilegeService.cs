@@ -1,3 +1,4 @@
+using log4net;
 using yay_see_sharp.domain.Abstractions;
 
 namespace yay_see_sharp.infrastructure.Privilege;
@@ -17,6 +18,7 @@ namespace yay_see_sharp.infrastructure.Privilege;
 /// </summary>
 public sealed class SudoPrivilegeService : IPrivilegeService
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(SudoPrivilegeService));
     private readonly ISudoInvoker _invoker;
     private bool _isElevated;
 
@@ -34,6 +36,7 @@ public sealed class SudoPrivilegeService : IPrivilegeService
         if (await _invoker.ValidateTimestampAsync(cancellationToken))
         {
             _isElevated = true;
+            Log.Info("Elevation granted from cached sudo timestamp");
             return PrivilegeResult.Granted;
         }
 
@@ -41,12 +44,14 @@ public sealed class SudoPrivilegeService : IPrivilegeService
 
         if (PasswordPrompt is null)
         {
+            Log.Warn("Elevation failed: no password prompt is wired up");
             return PrivilegeResult.Failed;
         }
 
         var password = await PasswordPrompt(cancellationToken);
         if (string.IsNullOrEmpty(password))
         {
+            Log.Info("Elevation cancelled by the user (empty password)");
             return PrivilegeResult.Cancelled;
         }
 
@@ -54,6 +59,7 @@ public sealed class SudoPrivilegeService : IPrivilegeService
         {
             var succeeded = await _invoker.RefreshWithPasswordAsync(password, cancellationToken);
             _isElevated = succeeded;
+            Log.Info(succeeded ? "Elevation granted after password refresh" : "Elevation failed: sudo rejected the password");
             return succeeded ? PrivilegeResult.Granted : PrivilegeResult.Failed;
         }
         finally
@@ -71,6 +77,7 @@ public sealed class SudoPrivilegeService : IPrivilegeService
 
         var stillValid = await _invoker.ValidateTimestampAsync(cancellationToken);
         _isElevated = stillValid;
+        Log.Info(stillValid ? "Sudo timestamp still valid" : "Sudo timestamp expired");
         return stillValid ? PrivilegeResult.Granted : PrivilegeResult.Failed;
     }
 }

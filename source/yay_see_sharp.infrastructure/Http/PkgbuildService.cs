@@ -1,4 +1,5 @@
 using System.Net.Http;
+using log4net;
 using yay_see_sharp.domain.Abstractions;
 using yay_see_sharp.domain.Models;
 
@@ -6,6 +7,7 @@ namespace yay_see_sharp.infrastructure.Http;
 
 public sealed class PkgbuildService : IPkgbuildService
 {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(PkgbuildService));
     private readonly HttpClient _httpClient;
 
     public PkgbuildService(HttpClient? httpClient = null)
@@ -15,7 +17,14 @@ public sealed class PkgbuildService : IPkgbuildService
 
     public async Task<string> FetchAsync(string packageName, PackageSource source, CancellationToken cancellationToken = default)
     {
-        using var response = await _httpClient.GetAsync(BuildUrl(packageName, source), cancellationToken);
+        var url = BuildUrl(packageName, source);
+        Log.Info($"Fetching PKGBUILD for {packageName} (source={source}) from {url}");
+        using var response = await _httpClient.GetAsync(url, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            Log.Warn($"PKGBUILD fetch for {packageName} returned HTTP {(int)response.StatusCode}");
+        }
+
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStringAsync(cancellationToken);
     }
