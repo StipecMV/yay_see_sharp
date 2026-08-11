@@ -14,26 +14,32 @@ public sealed class YayPackageBackend : IPackageBackend
     private readonly IPrivilegeService? _privilegeService;
     private readonly IPacmanQueryService _pacmanQueryService;
     private readonly IBuildDirectoryPolicy? _buildDirectoryPolicy;
+    private readonly string _executable;
 
     private DateTimeOffset? _lastUpdateCheck;
 
+    /// <param name="engine">The AUR-helper executable to drive: yay (default) or paru. Both
+    /// share the same CLI surface for everything this backend issues (-Ss/-Si/-Sia/-Qi/-Q/-Qu/
+    /// -S/-R/-Syu), so the backend is parameterized rather than duplicated (PARU-2026-08).</param>
     public YayPackageBackend(
         ICommandRunner commandRunner,
         IYayOutputParser outputParser,
         BackendInfo? info = null,
         IPrivilegeService? privilegeService = null,
         IPacmanQueryService? pacmanQueryService = null,
-        IBuildDirectoryPolicy? buildDirectoryPolicy = null)
+        IBuildDirectoryPolicy? buildDirectoryPolicy = null,
+        PackageManagerEngine? engine = null)
     {
         _commandRunner = commandRunner;
         _outputParser = outputParser;
         _privilegeService = privilegeService;
         _pacmanQueryService = pacmanQueryService ?? new PacmanQueryService(commandRunner, outputParser);
         _buildDirectoryPolicy = buildDirectoryPolicy;
+        _executable = engine == PackageManagerEngine.Paru ? "paru" : "yay";
         Info = info ?? new BackendInfo(
             "arch",
             "Arch Linux",
-            "yay",
+            _executable,
             BackendMode.Real,
             true);
     }
@@ -100,7 +106,7 @@ public sealed class YayPackageBackend : IPackageBackend
         // option. Always included, not just when the query looks suspicious, so the command
         // shape is the same for every search and doesn't need a second code path to test.
         var searchTask = _commandRunner.RunAsync(
-            new CommandRequest("yay", ["-Ss", "--", trimmedQuery]),
+            new CommandRequest(_executable, ["-Ss", "--", trimmedQuery]),
             cancellationToken: cancellationToken);
 
         // BUGFIX-2026-08: the "[installed]" marker yay prints next to search results is the
@@ -116,7 +122,7 @@ public sealed class YayPackageBackend : IPackageBackend
         if (!result.Succeeded)
         {
             throw new InvalidOperationException(
-                $"yay search failed with exit code {result.ExitCode}: {result.CombinedText}");
+                $"{_executable} search failed with exit code {result.ExitCode}: {result.CombinedText}");
         }
 
         var packages = _outputParser.ParseSearch(result.CombinedText);
@@ -182,7 +188,7 @@ public sealed class YayPackageBackend : IPackageBackend
         // sync-db info (-Si for official repos, -Sia for AUR) so Search → details still works
         // before the user ever installs anything.
         var installed = await _commandRunner.RunAsync(
-            new CommandRequest("yay", ["-Qi", trimmed]),
+            new CommandRequest(_executable, ["-Qi", trimmed]),
             cancellationToken: cancellationToken);
         if (installed.Succeeded)
         {
@@ -191,20 +197,20 @@ public sealed class YayPackageBackend : IPackageBackend
         }
 
         var official = await _commandRunner.RunAsync(
-            new CommandRequest("yay", ["-Si", trimmed]),
+            new CommandRequest(_executable, ["-Si", trimmed]),
             cancellationToken: cancellationToken);
         if (official.Succeeded)
         {
-            Log.Info($"Details for '{trimmed}' from sync database (yay -Si)");
+            Log.Info($"Details for '{trimmed}' from sync database ({_executable} -Si)");
             return _outputParser.ParseInfo(official.CombinedText, PackageSource.Official);
         }
 
         var aur = await _commandRunner.RunAsync(
-            new CommandRequest("yay", ["-Sia", trimmed]),
+            new CommandRequest(_executable, ["-Sia", trimmed]),
             cancellationToken: cancellationToken);
         if (aur.Succeeded)
         {
-            Log.Info($"Details for '{trimmed}' from AUR (yay -Sia)");
+            Log.Info($"Details for '{trimmed}' from AUR ({_executable} -Sia)");
             return _outputParser.ParseInfo(aur.CombinedText, PackageSource.Aur);
         }
 
@@ -223,7 +229,7 @@ public sealed class YayPackageBackend : IPackageBackend
         CancellationToken cancellationToken = default)
     {
         var result = await _commandRunner.RunAsync(
-            new CommandRequest("yay", ["-Qu"]),
+            new CommandRequest(_executable, ["-Qu"]),
             cancellationToken: cancellationToken);
 
         // yay -Qu (like pacman -Qu) exits 1 when there are simply no updates — a real, valid
@@ -241,7 +247,7 @@ public sealed class YayPackageBackend : IPackageBackend
         if (!result.Succeeded)
         {
             throw new InvalidOperationException(
-                $"yay update check failed with exit code {result.ExitCode}: {result.CombinedText}");
+                $"{_executable} update check failed with exit code {result.ExitCode}: {result.CombinedText}");
         }
 
         var foreignNames = await _pacmanQueryService.GetForeignPackageNamesAsync(cancellationToken);
@@ -256,13 +262,13 @@ public sealed class YayPackageBackend : IPackageBackend
         CancellationToken cancellationToken = default)
     {
         var result = await _commandRunner.RunAsync(
-            new CommandRequest("yay", ["-Q"]),
+            new CommandRequest(_executable, ["-Q"]),
             cancellationToken: cancellationToken);
 
         if (!result.Succeeded)
         {
             throw new InvalidOperationException(
-                $"yay installed package query failed with exit code {result.ExitCode}: {result.CombinedText}");
+                $"{_executable} installed package query failed with exit code {result.ExitCode}: {result.CombinedText}");
         }
 
         var foreignNames = await _pacmanQueryService.GetForeignPackageNamesAsync(cancellationToken);
@@ -319,8 +325,8 @@ public sealed class YayPackageBackend : IPackageBackend
         arguments.Add(trimmedName);
 
         var displayCommand = buildDirectory is null
-            ? "yay --needed --noconfirm -S <package>"
-            : $"yay --needed --noconfirm --builddir {buildDirectory} -S <package>";
+            ? $"{_executable} --needed --noconfirm -S <package>"
+            : $"{_executable} --needed --noconfirm --builddir {buildDirectory} -S <package>";
 
         Log.Info($"Install starting: {trimmedName}");
         yield return new PackageOperationProgress(
@@ -337,7 +343,7 @@ public sealed class YayPackageBackend : IPackageBackend
         }
 
         var result = await _commandRunner.RunAsync(
-            new CommandRequest("yay", arguments),
+            new CommandRequest(_executable, arguments),
             cancellationToken: cancellationToken);
 
         if (result.WasCancelled)
@@ -402,7 +408,7 @@ public sealed class YayPackageBackend : IPackageBackend
         }
 
         var removeFlag = removeOrphans ? "-Rns" : "-Rn";
-        var displayCommand = $"yay --noconfirm {removeFlag} <package>";
+        var displayCommand = $"{_executable} --noconfirm {removeFlag} <package>";
 
         Log.Info($"Uninstall starting: {packageName.Trim()} (removeOrphans={removeOrphans})");
         yield return new PackageOperationProgress(
@@ -419,7 +425,7 @@ public sealed class YayPackageBackend : IPackageBackend
         }
 
         var result = await _commandRunner.RunAsync(
-            new CommandRequest("yay", ["--noconfirm", removeFlag, packageName.Trim()]),
+            new CommandRequest(_executable, ["--noconfirm", removeFlag, packageName.Trim()]),
             cancellationToken: cancellationToken);
 
         if (result.WasCancelled)
@@ -498,8 +504,8 @@ public sealed class YayPackageBackend : IPackageBackend
             }
 
             displayCommand = buildDirectory is null
-                ? "yay -Syu --noconfirm"
-                : $"yay -Syu --noconfirm --builddir {buildDirectory}";
+                ? $"{_executable} -Syu --noconfirm"
+                : $"{_executable} -Syu --noconfirm --builddir {buildDirectory}";
         }
         else
         {
@@ -515,8 +521,8 @@ public sealed class YayPackageBackend : IPackageBackend
             arguments.AddRange(trimmedNames);
 
             displayCommand = buildDirectory is null
-                ? "yay -S --noconfirm --needed <packages>"
-                : $"yay -S --noconfirm --needed --builddir {buildDirectory} <packages>";
+                ? $"{_executable} -S --noconfirm --needed <packages>"
+                : $"{_executable} -S --noconfirm --needed --builddir {buildDirectory} <packages>";
         }
 
         Log.Info(trimmedNames.Length == 0
@@ -538,7 +544,7 @@ public sealed class YayPackageBackend : IPackageBackend
         }
 
         var result = await _commandRunner.RunAsync(
-            new CommandRequest("yay", arguments),
+            new CommandRequest(_executable, arguments),
             cancellationToken: cancellationToken);
 
         if (result.WasCancelled)

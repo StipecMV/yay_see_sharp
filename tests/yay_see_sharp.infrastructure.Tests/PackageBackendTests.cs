@@ -595,6 +595,39 @@ public class PackageBackendTests
     }
 
     [Test]
+    public async Task Paru_engine_runs_commands_through_the_paru_executable()
+    {
+        // PARU-2026-08: the same backend parameterized for paru must issue every yay-style
+        // command via the paru binary (and keep the pacman -Qq installed-state cross-check).
+        var runner = new Mock<ICommandRunner>();
+        var parser = new Mock<IYayOutputParser>();
+        runner.Setup(item => item.RunAsync(
+                It.Is<CommandRequest>(request =>
+                    request.FileName == "paru" &&
+                    request.Arguments.SequenceEqual(new[] { "-Ss", "--", "hello" })),
+                It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CommandResult(0,
+            [
+                new CommandOutput(CommandOutputKind.StandardOutput, "search output", DateTimeOffset.UtcNow),
+            ], false));
+        SetupPacman(runner, ["-Qq"], 0, "hello");
+        var expected = new[]
+        {
+            new PackageSummary("hello", "2.12.1-1", "Greeting utility", PackageSource.Official, 0, PackageState.Installed),
+        };
+        parser.Setup(item => item.ParseSearch("search output")).Returns(expected);
+
+        var backend = new YayPackageBackend(runner.Object, parser.Object, engine: PackageManagerEngine.Paru);
+        var results = await backend.SearchAsync("hello");
+
+        await Assert.That(results.Count).IsEqualTo(1);
+        await Assert.That(backend.Info.PackageManager).IsEqualTo("paru");
+        runner.Verify(item => item.RunAsync(
+            It.Is<CommandRequest>(request => request.FileName == "paru"),
+            It.IsAny<IProgress<CommandOutput>?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
     public async Task Yay_install_reports_completion_on_success()
     {
         var runner = new Mock<ICommandRunner>();

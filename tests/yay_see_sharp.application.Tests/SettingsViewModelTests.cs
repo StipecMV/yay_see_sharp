@@ -215,24 +215,45 @@ public class SettingsViewModelTests
     }
 
     [Test]
-    public async Task Engine_options_only_offer_yay_since_paru_has_no_backend_implementation_yet()
+    public async Task Engine_options_offer_both_yay_and_paru()
     {
         var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
         var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, Mock.Of<IEngineDetector>());
 
-        await Assert.That(viewModel.EngineOptions.Count).IsEqualTo(1);
+        await Assert.That(viewModel.EngineOptions.Count).IsEqualTo(2);
         await Assert.That(viewModel.EngineOptions[0].Value).IsEqualTo(PackageManagerEngine.Yay);
+        await Assert.That(viewModel.EngineOptions[1].Value).IsEqualTo(PackageManagerEngine.Paru);
+        await Assert.That(viewModel.EngineOptions[1].Label).IsEqualTo("paru");
     }
 
     [Test]
-    public async Task A_persisted_paru_preference_is_clamped_back_to_yay_on_load()
+    public async Task A_persisted_paru_preference_is_preserved_on_load()
     {
         var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
         var persisted = AppSettings.Default with { Engine = PackageManagerEngine.Paru };
 
         var viewModel = new SettingsViewModel(store, new LocalizationService("en"), persisted, Mock.Of<IEngineDetector>());
 
-        await Assert.That(viewModel.Engine).IsEqualTo(PackageManagerEngine.Yay);
+        await Assert.That(viewModel.Engine).IsEqualTo(PackageManagerEngine.Paru);
+    }
+
+    [Test]
+    public async Task Detect_in_real_mode_applies_a_found_paru_engine()
+    {
+        var store = new FileSettingsStore(Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json"));
+        var notifications = new RecordingNotificationService();
+        var detector = new Mock<IEngineDetector>();
+        detector.Setup(d => d.Detect()).Returns(PackageManagerEngine.Paru);
+        var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, detector.Object, notifications);
+        viewModel.SetBackendMode(BackendMode.Real);
+
+        viewModel.DetectEngineCommand.Execute().Subscribe();
+
+        await Assert.That(viewModel.Engine).IsEqualTo(PackageManagerEngine.Paru);
+        await Assert.That(notifications.Sent.Count).IsEqualTo(1);
+        await Assert.That(notifications.Sent[0].Title).IsEqualTo("Detection result");
+        await Assert.That(notifications.Sent[0].Body).Contains("paru");
+        await Assert.That(notifications.Sent[0].Level).IsEqualTo(NotificationLevel.Success);
     }
 
     // --- BUGFIX-2026-08: Detect reports what it found; "Saved" only after a real change ---
@@ -260,13 +281,13 @@ public class SettingsViewModelTests
     }
 
     [Test]
-    public async Task Detect_reports_paru_and_nothing_found_without_saving()
+    public async Task Detect_reports_nothing_found_without_saving()
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".json");
         var store = new FileSettingsStore(path);
         var notifications = new RecordingNotificationService();
         var detector = new Mock<IEngineDetector>();
-        detector.Setup(d => d.Detect()).Returns(PackageManagerEngine.Paru);
+        detector.Setup(d => d.Detect()).Returns((PackageManagerEngine?)null);
         var viewModel = new SettingsViewModel(store, new LocalizationService("en"), AppSettings.Default, detector.Object, notifications);
         viewModel.SetBackendMode(BackendMode.Real);
 
@@ -274,18 +295,9 @@ public class SettingsViewModelTests
 
         await Assert.That(notifications.Sent.Count).IsEqualTo(1);
         await Assert.That(notifications.Sent[0].Title).IsEqualTo("Detection result");
-        await Assert.That(notifications.Sent[0].Body).Contains("paru");
-        await Assert.That(notifications.Sent[0].Level).IsEqualTo(NotificationLevel.Info);
-        await Assert.That(File.Exists(path)).IsFalse();
-
-        notifications.Sent.Clear();
-        detector.Setup(d => d.Detect()).Returns((PackageManagerEngine?)null);
-
-        viewModel.DetectEngineCommand.Execute().Subscribe();
-
-        await Assert.That(notifications.Sent.Count).IsEqualTo(1);
         await Assert.That(notifications.Sent[0].Body).Contains("No supported package manager engine");
         await Assert.That(notifications.Sent[0].Level).IsEqualTo(NotificationLevel.Warning);
+        // Detect must not trigger an auto-save when nothing was found (nothing changed).
         await Assert.That(File.Exists(path)).IsFalse();
     }
 

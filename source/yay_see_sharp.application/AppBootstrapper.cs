@@ -89,6 +89,7 @@ public static class AppBootstrapper
             new SystemCommandRunner(),
             new YayOutputParser(),
             privilegeService,
+            settingsViewModel,
             settingsViewModel);
         var backend = backendFactory.Create();
 
@@ -107,8 +108,11 @@ public static class AppBootstrapper
         var installed = new InstalledPackagesViewModel(backend, localizationService, pkgbuildService, settingsViewModel, notificationService);
 
         // Only constructed when there's actually a missing backend to offer installing — on Real
-        // or Demo mode there's nothing for it to do.
-        IBackendInstaller? backendInstaller = backend.Info.Mode == BackendMode.Unavailable
+        // or Demo mode there's nothing for it to do. The installer always installs yay, so it is
+        // only offered when yay is the preferred (missing) engine; a missing paru shows the
+        // localized warning instead (installing paru is a terminal one-liner, and the prompt
+        // texts are yay-specific) — PARU-2026-08.
+        IBackendInstaller? backendInstaller = backend.Info.Mode == BackendMode.Unavailable && settingsViewModel.Engine != PackageManagerEngine.Paru
             ? new YayBackendInstaller(new SystemCommandRunner(), backend.Info.DistributionId == "cachyos", privilegeService)
             : null;
 

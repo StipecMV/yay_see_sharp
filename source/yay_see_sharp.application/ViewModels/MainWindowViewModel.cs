@@ -164,6 +164,9 @@ public class MainWindowViewModel : LocalizedViewModelBase
 
     public string? WarningMessage => Mode switch
     {
+        // PARU-2026-08: the missing-engine warning names the engine the user actually prefers
+        // (paru preference + paru missing must not claim yay is missing).
+        BackendMode.Unavailable when Settings.Engine == PackageManagerEngine.Paru => Localization.GetString("Dashboard.ParuMissingWarning"),
         BackendMode.Unavailable => Localization.GetString("Dashboard.YayMissingWarning"),
         _ when HasWarning => string.Format(Localization.GetString("Dashboard.UnsupportedWarning"), DistributionName),
         _ => null,

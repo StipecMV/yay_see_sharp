@@ -118,4 +118,70 @@ public class PackageBackendFactoryTests
         engineDetector.Verify(item => item.Detect(), Times.Once);
         detector.Verify(item => item.CreateBackendInfo(snapshot, true), Times.Once);
     }
+
+    [Test]
+    public async Task Paru_preference_with_paru_on_path_selects_the_real_paru_backend()
+    {
+        // PARU-2026-08: with the engine preference set to Paru and paru actually on PATH, the
+        // factory must build the real backend configured for paru — not yay.
+        var snapshot = new DistributionSnapshot("arch", "Arch Linux", "KDE", "wayland");
+        var real = new BackendInfo("arch", "Arch Linux", "yay", BackendMode.Real, true);
+        var unavailable = new BackendInfo("arch", "Arch Linux", "demo", BackendMode.Unavailable, false, "yay missing");
+        var detector = CreateDetector(snapshot, real, unavailable);
+        var engineDetector = CreateEngineDetector(PackageManagerEngine.Paru);
+        var preference = new Mock<IEnginePreference>();
+        preference.Setup(item => item.Engine).Returns(PackageManagerEngine.Paru);
+
+        var factory = new PackageBackendFactory(
+            detector.Object, engineDetector.Object, Mock.Of<ICommandRunner>(), Mock.Of<IYayOutputParser>(),
+            enginePreference: preference.Object);
+        var backend = factory.Create();
+
+        await Assert.That(backend).IsTypeOf<YayPackageBackend>();
+        await Assert.That(backend.Info.Mode).IsEqualTo(BackendMode.Real);
+        await Assert.That(backend.Info.PackageManager).IsEqualTo("paru");
+        detector.Verify(item => item.CreateBackendInfo(snapshot, true), Times.Once);
+    }
+
+    [Test]
+    public async Task Paru_preference_with_only_yay_on_path_is_unavailable_not_real()
+    {
+        // Preferred engine (paru) missing from PATH must not silently fall back to yay — the
+        // strict preference keeps the app honest: Unavailable + Demo-backed instance.
+        var snapshot = new DistributionSnapshot("arch", "Arch Linux", "KDE", "wayland");
+        var real = new BackendInfo("arch", "Arch Linux", "yay", BackendMode.Real, true);
+        var unavailable = new BackendInfo("arch", "Arch Linux", "demo", BackendMode.Unavailable, false, "yay missing");
+        var detector = CreateDetector(snapshot, real, unavailable);
+        var engineDetector = CreateEngineDetector(PackageManagerEngine.Yay);
+        var preference = new Mock<IEnginePreference>();
+        preference.Setup(item => item.Engine).Returns(PackageManagerEngine.Paru);
+
+        var factory = new PackageBackendFactory(
+            detector.Object, engineDetector.Object, Mock.Of<ICommandRunner>(), Mock.Of<IYayOutputParser>(),
+            enginePreference: preference.Object);
+        var backend = factory.Create();
+
+        await Assert.That(backend).IsTypeOf<DemoPackageBackend>();
+        await Assert.That(backend.Info.Mode).IsEqualTo(BackendMode.Unavailable);
+        await Assert.That(backend.Info.IsSupported).IsFalse();
+        await Assert.That(backend.Info.Warning).Contains("paru");
+        detector.Verify(item => item.CreateBackendInfo(snapshot, false), Times.Once);
+    }
+
+    [Test]
+    public async Task No_engine_preference_configured_defaults_to_yay()
+    {
+        var snapshot = new DistributionSnapshot("arch", "Arch Linux", "KDE", "wayland");
+        var real = new BackendInfo("arch", "Arch Linux", "yay", BackendMode.Real, true);
+        var unavailable = new BackendInfo("arch", "Arch Linux", "demo", BackendMode.Unavailable, false);
+        var detector = CreateDetector(snapshot, real, unavailable);
+        var engineDetector = CreateEngineDetector(PackageManagerEngine.Yay);
+
+        var factory = new PackageBackendFactory(
+            detector.Object, engineDetector.Object, Mock.Of<ICommandRunner>(), Mock.Of<IYayOutputParser>());
+        var backend = factory.Create();
+
+        await Assert.That(backend).IsTypeOf<YayPackageBackend>();
+        await Assert.That(backend.Info.PackageManager).IsEqualTo("yay");
+    }
 }

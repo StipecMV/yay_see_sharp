@@ -6,7 +6,7 @@
 ![Avalonia](https://img.shields.io/badge/Avalonia%20UI-12.x-6E40C9)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-A fast, minimal desktop GUI for the [`yay`](https://github.com/Jguer/yay) AUR helper on Arch Linux and CachyOS — for people who want to search, install, update and remove packages without living in a terminal, and without a bloated package manager GUI getting in the way.
+A fast, minimal desktop GUI for the [`yay`](https://github.com/Jguer/yay) / [`paru`](https://github.com/Morganamilo/paru) AUR helpers on Arch Linux and CachyOS — for people who want to search, install, update and remove packages without living in a terminal, and without a bloated package manager GUI getting in the way.
 
 ## Screenshots
 
@@ -30,7 +30,7 @@ A fast, minimal desktop GUI for the [`yay`](https://github.com/Jguer/yay) AUR he
 
 - **Search** the official repositories and the AUR side by side, filterable by source, with a visible loading indicator while searches are in flight
 - **Install / uninstall / update** with live, streamed command output and a cancellable progress modal; failures show the actual error output, not just an exit code
-- **Automatic backend detection** — real `yay` on Arch Linux/CachyOS *with `yay` on PATH*, a realistic in-memory **Demo mode** everywhere else (safe to explore on any distro, never touches the host); on Arch/CachyOS *without* `yay`, the app offers to install it instead of silently pretending Real mode works; the Settings **Detect** button reports what it actually found
+- **Automatic backend detection** — real `yay`/`paru` on Arch Linux/CachyOS (the engine selected in Settings, verified on PATH), a realistic in-memory **Demo mode** everywhere else (safe to explore on any distro, never touches the host); on Arch/CachyOS *without* the selected engine, the app offers to install `yay` (or shows a clear warning for a missing `paru`) instead of silently pretending Real mode works; the Settings **Detect** button reports and applies what it actually found
 - **Scheduled background update checks** with in-app notifications (OS-level notifications are opt-in via Settings — off by default, so one event never produces two popups)
 - **In-app PKGBUILD viewer** — fetched straight from the AUR, no browser round-trip
 - **Orphan cleanup** on uninstall, configurable as a default
@@ -44,8 +44,8 @@ A fast, minimal desktop GUI for the [`yay`](https://github.com/Jguer/yay) AUR he
 ## Requirements
 
 - **OS:** Linux with an X11 or Wayland display session
-- **Real mode:** Arch Linux or CachyOS, with `yay` installed
-- **Demo mode:** any other Linux distribution (Ubuntu, Debian, Fedora, ...) — no `yay` required
+- **Real mode:** Arch Linux or CachyOS, with the engine selected in Settings (`yay` or `paru`) installed on PATH
+- **Demo mode:** any other Linux distribution (Ubuntu, Debian, Fedora, ...) — no AUR helper required
 - **.NET runtime:** 10.0 or later
 
 ## Quick start
@@ -57,7 +57,7 @@ dotnet build yay_see_sharp.slnx
 dotnet run --project source/yay_see_sharp.application/yay_see_sharp.application.csproj
 ```
 
-The active mode is detected automatically at startup: Arch Linux/CachyOS with `yay` installed runs in **Real mode**; everything else runs in **Demo mode** with simulated data.
+The active mode is detected automatically at startup: Arch Linux/CachyOS with the selected engine (`yay` or `paru`) on PATH runs in **Real mode**; everything else runs in **Demo mode** with simulated data.
 
 > **Real mode status:** the Real backend (`YayPackageBackend`) was exercised on a live CachyOS desktop in August 2026 (install/uninstall/update flows, search, filters, settings) and the issues found there were fixed and covered by regression tests — see [`docs/bugfixes-2026-08.md`](docs/bugfixes-2026-08.md). It is still **not** verified in this repository's own CI (no Arch/CachyOS runner with real `yay` yet); anything that needs a real display session, a real D-Bus/notification daemon, a real system tray, or a real `sudo` prompt (tray icon behavior, OS-level desktop notifications, the interactive privilege-elevation dialog) is exercised only in Demo mode and headless E2E here — it requires manual verification on an actual Arch/CachyOS desktop before being trusted in production.
 
@@ -77,7 +77,7 @@ graph TD
 ```
 
 - **`yay_see_sharp.domain`** — plain C# models and interfaces (`IPackageBackend`, `IPrivilegeService`, `INotificationService`, ...). No Avalonia, no platform-specific I/O, no NuGet dependencies beyond the BCL.
-- **`yay_see_sharp.infrastructure`** — every concrete implementation: `YayPackageBackend` (wraps `yay` via a controlled `ICommandRunner`, never a shell string), `DemoPackageBackend`, HTTP/filesystem services, `sudo` elevation, the update scheduler, desktop notifications. No Avalonia dependency.
+- **`yay_see_sharp.infrastructure`** — every concrete implementation: `YayPackageBackend` (wraps `yay`/`paru` via a controlled `ICommandRunner`, never a shell string — the same backend is parameterized by engine), `DemoPackageBackend`, HTTP/filesystem services, `sudo` elevation, the update scheduler, desktop notifications. No Avalonia dependency.
 - **`yay_see_sharp.application`** — Avalonia Views, ViewModels, theming, and `AppBootstrapper` (the single composition root that wires real services together at startup).
 
 The UI never shells out to `yay`, `pacman`, or any command directly — every package operation goes through `IPackageBackend`, so the same ViewModels drive both the real backend and the Demo backend identically.

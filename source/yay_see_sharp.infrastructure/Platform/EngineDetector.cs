@@ -25,7 +25,7 @@ public sealed class EngineDetector : IEngineDetector
 
         if (IsOnPath("paru"))
         {
-            Log.Info("Engine detection: paru found on PATH (not supported as a backend yet)");
+            Log.Info("Engine detection: paru found on PATH");
             return PackageManagerEngine.Paru;
         }
 

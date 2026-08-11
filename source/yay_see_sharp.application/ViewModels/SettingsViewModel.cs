@@ -9,7 +9,7 @@ using yay_see_sharp.domain.Models;
 
 namespace yay_see_sharp.application.ViewModels;
 
-public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpdateScheduleSettings, INotificationSettings, IBuildDirectoryPolicy
+public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpdateScheduleSettings, INotificationSettings, IBuildDirectoryPolicy, IEnginePreference
 {
     private static readonly ILog Log = LogManager.GetLogger(typeof(SettingsViewModel));
     private readonly ISettingsStore _settingsStore;
@@ -49,9 +49,9 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         _notificationsEnabled = initial.NotificationsEnabled;
         _removeOrphansByDefault = initial.RemoveOrphansByDefault;
         _updateScheduleTime = initial.UpdateScheduleTime;
-        // Clamp a stale/persisted Paru preference back to Yay: only Yay is a selectable option
-        // today, and leaving it unclamped would desync SelectedValue from EngineOptions.
-        _engine = initial.Engine == PackageManagerEngine.Yay ? initial.Engine : PackageManagerEngine.Yay;
+        // PARU-2026-08: paru is a fully supported engine now (ParuPackageBackend-equivalent via
+        // the parameterized real backend), so a persisted Paru preference is kept as-is.
+        _engine = initial.Engine;
         _buildDirectory = initial.BuildDirectory;
         _autoUpdateCheckEnabled = initial.AutoUpdateCheckEnabled;
         _languageOptions = BuildLanguageOptions();
@@ -352,12 +352,12 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         .Select(value => new SelectableOption<CloseAction>(value, Localization.GetString($"Settings.CloseAction.{value}")))
         .ToArray();
 
-    // Only yay is implemented (see PackageBackendFactory.Create). PackageManagerEngine.Paru
-    // still exists on the enum for when a ParuPackageBackend lands, but it's deliberately left
-    // out of the selectable options so the UI can't offer an engine the app can't actually run.
+    /// <summary>Both engines are implemented (the real backend is parameterized by engine, see
+    /// PackageBackendFactory.Create), so yay and paru are both selectable here.</summary>
     private IReadOnlyList<SelectableOption<PackageManagerEngine>> BuildEngineOptions() =>
     [
         new(PackageManagerEngine.Yay, Localization.GetString($"Settings.Engine.{PackageManagerEngine.Yay}")),
+        new(PackageManagerEngine.Paru, Localization.GetString($"Settings.Engine.{PackageManagerEngine.Paru}")),
     ];
 
     /// <summary>
@@ -381,9 +381,9 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
             return;
         }
 
-        // Detection can still report Paru if that's what's on PATH, but there's nothing to
-        // switch to yet, so only a Yay result is applied (and even then Engine is already Yay in
-        // practice — the assignment is defensive, not a real change).
+        // Both engines are supported: whatever Detect finds is applied to the Engine preference
+        // (a real change triggers the debounced auto-save, persisting the switch for the next
+        // launch; the running backend itself is fixed for this session).
         var detected = _engineDetector.Detect();
         if (detected is PackageManagerEngine.Yay)
         {
@@ -393,8 +393,9 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         }
         else if (detected is PackageManagerEngine.Paru)
         {
+            Engine = PackageManagerEngine.Paru;
             _notificationService.SendAsync(
-                DetectResultTitleLabel, DetectFoundParuLabel, NotificationLevel.Info).FireAndForget();
+                DetectResultTitleLabel, DetectFoundParuLabel, NotificationLevel.Success).FireAndForget();
         }
         else
         {
@@ -403,7 +404,9 @@ public class SettingsViewModel : LocalizedViewModelBase, IUninstallPolicy, IUpda
         }
     }
 
-    /// <summary>UI-18: called from the Engine picker's Yay option when clicked in Demo/Simulated mode (there's nothing to actually switch to — the running backend is fixed for this session).</summary>
+    /// <summary>UI-18: called when the engine picker is pressed in Demo/Simulated mode (there's
+    /// nothing to actually switch to — the running backend is fixed for this session), so the
+    /// press is answered with an explanatory toast instead of silently doing nothing.</summary>
     public void NotifyIfSimulated()
     {
         if (_backendMode != BackendMode.Real)

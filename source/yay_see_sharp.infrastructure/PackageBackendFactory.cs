@@ -17,6 +17,7 @@ public sealed class PackageBackendFactory : IPackageBackendFactory
     private readonly IYayOutputParser _outputParser;
     private readonly IPrivilegeService? _privilegeService;
     private readonly IBuildDirectoryPolicy? _buildDirectoryPolicy;
+    private readonly IEnginePreference? _enginePreference;
 
     public PackageBackendFactory(
         IDistributionDetector distributionDetector,
@@ -24,7 +25,8 @@ public sealed class PackageBackendFactory : IPackageBackendFactory
         ICommandRunner commandRunner,
         IYayOutputParser outputParser,
         IPrivilegeService? privilegeService = null,
-        IBuildDirectoryPolicy? buildDirectoryPolicy = null)
+        IBuildDirectoryPolicy? buildDirectoryPolicy = null,
+        IEnginePreference? enginePreference = null)
     {
         _distributionDetector = distributionDetector;
         _engineDetector = engineDetector;
@@ -32,34 +34,43 @@ public sealed class PackageBackendFactory : IPackageBackendFactory
         _outputParser = outputParser;
         _privilegeService = privilegeService;
         _buildDirectoryPolicy = buildDirectoryPolicy;
+        _enginePreference = enginePreference;
     }
 
     public IPackageBackend Create()
     {
         var snapshot = _distributionDetector.Detect();
 
-        // EngineDetector is the single source of truth for "is yay actually usable" — the
-        // distribution detector only knows the OS identity, never the PATH itself, so real-mode
-        // eligibility always flows through this one check.
-        var yayAvailable = _engineDetector.Detect() == PackageManagerEngine.Yay;
-        var info = _distributionDetector.CreateBackendInfo(snapshot, yayAvailable);
+        // PARU-2026-08: the preferred engine comes from Settings (yay by default when nothing is
+        // wired up). EngineDetector stays the single source of truth for "is the engine actually
+        // usable" — distribution identity only says which OS this is, never what's on PATH, so
+        // real-mode eligibility always flows through this one check against the *preferred*
+        // engine (a system with only paru installed and yay selected is Unavailable, not Real).
+        var preferredEngine = _enginePreference?.Engine ?? PackageManagerEngine.Yay;
+        var preferredAvailable = _engineDetector.Detect() == preferredEngine;
+        var info = _distributionDetector.CreateBackendInfo(snapshot, preferredAvailable);
 
-        // TODO: paru support — add a ParuPackageBackend and branch on Settings.Engine once one
-        // exists. Only yay is implemented today, so the real backend is always YayPackageBackend
-        // regardless of the user's engine preference (see SettingsViewModel.EngineOptions, which
-        // is limited to Yay for the same reason).
-        //
-        // BackendMode.Unavailable (Arch/CachyOS detected but yay missing from PATH) falls back to
-        // the same safe Demo-backed instance as a non-Arch host — Info.Mode still reports
-        // Unavailable so the UI can offer to install the real backend, but no yay/pacman command
-        // ever gets run against a binary we just confirmed doesn't exist.
+        // The detector only knows booleans and hardcodes "yay" — the factory corrects the
+        // reported package manager + warning so the UI/logs name the engine that actually runs.
+        if (info.Mode == BackendMode.Real)
+        {
+            info = info with { PackageManager = preferredEngine == PackageManagerEngine.Paru ? "paru" : "yay" };
+        }
+        else if (info.Mode == BackendMode.Unavailable && preferredEngine == PackageManagerEngine.Paru)
+        {
+            info = info with
+            {
+                Warning = "paru was not found on PATH. Install it (or switch the engine back to yay in Settings) to use Real mode, or continue in Demo mode.",
+            };
+        }
+
         // Log the choice so the message carries the actual mode selected.
         Log.Info(
             $"Backend selected: mode={info.Mode} packageManager={info.PackageManager} distribution={info.DistributionId} ({info.DistributionName})" +
             (string.IsNullOrWhiteSpace(info.Warning) ? string.Empty : $" — {info.Warning}"));
 
         return info.Mode == BackendMode.Real
-            ? new YayPackageBackend(_commandRunner, _outputParser, info, _privilegeService, buildDirectoryPolicy: _buildDirectoryPolicy)
+            ? new YayPackageBackend(_commandRunner, _outputParser, info, _privilegeService, buildDirectoryPolicy: _buildDirectoryPolicy, engine: preferredEngine)
             : new DemoPackageBackend(info);
     }
 }

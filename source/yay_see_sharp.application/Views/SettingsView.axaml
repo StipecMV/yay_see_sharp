@@ -50,9 +50,8 @@
                     <TextBlock Text="{Binding EngineLabel}" FontSize="26" FontWeight="Medium" Foreground="{DynamicResource Brush.Text}"/>
                     <TextBlock Text="{Binding EngineHintLabel}" FontSize="23" Foreground="{DynamicResource Brush.TextFaint}" Margin="0,4,0,20"/>
                     <StackPanel Orientation="Horizontal" Spacing="16">
-                        <!-- UI-18: only "yay" is ever selectable here, so any press on this picker
-                             is effectively clicking it — in Demo/Simulated mode that's informational
-                             only (see SettingsViewModel.NotifyIfSimulated). -->
+                        <!-- UI-18: yay/paru are both selectable; in Demo/Simulated mode a press is
+                             informational only (see SettingsViewModel.NotifyIfSimulated). -->
                         <ListBox Theme="{StaticResource SegmentedListBox}"
                                  ItemsSource="{Binding EngineOptions}" SelectedValue="{Binding Engine}" SelectedValueBinding="{Binding Value}"
                                  PointerPressed="OnEngineOptionsPressed">
