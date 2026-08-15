@@ -6,10 +6,10 @@
 
 ## Supported platform behavior
 
-- **Arch Linux / CachyOS:** Real mode using the installed `yay` command. The MVP's real backend is `yay`; other helpers such as `paru` are future extension points, not an MVP backend.
-- **Ubuntu / Debian / other distributions:** Automatic Demo mode for the MVP. Demo data must be realistic, not random placeholder data. A future `apt` backend must be possible without changing the UI layer.
+- **Arch Linux / CachyOS:** Real mode using the engine selected in Settings — **`yay` or `paru`** (both are first-class engines since 2026-08; `YayPackageBackend` is parameterized by executable). A missing preferred engine = **Unavailable** (not a silent fallback to the other), shown as a localized warning (`Dashboard.ParuMissingWarning`), with `sudo pacman -S paru` as the install path.
+- **Ubuntu / Debian / other distributions:** Automatic Demo mode. Demo data must be realistic, not random placeholder data. A future `apt` backend must be possible without changing the UI layer.
 - Distribution detection is based on `/etc/os-release`.
-- The active distribution, backend and mode are visible when the application starts.
+- The active distribution, backend, engine and mode are visible when the application starts.
 
 ## MVP capabilities
 
@@ -54,7 +54,7 @@
 - The app can minimize to the system tray and restore its previous size, position and UI state.
 - Closing the window defaults to hiding it in the tray; full exit is available from the tray menu. This behavior is configurable.
 - Only one application instance may run. A second launch activates the existing instance.
-- Desktop notifications are enabled by default and can be disabled in settings. Notifications cover available updates, successful install/uninstall, completed updates, operation errors and renewed sudo authorization.
+- Desktop notifications (OS-level `notify-send`) are **off by default** and can be enabled in Settings (avoids double popups — in-app toasts are always on). Notifications cover available updates, successful install/uninstall, completed updates, operation errors and renewed sudo authorization.
 - Desktop environment is detected and tray behavior is extensible. KDE Plasma is the primary real-system target; GNOME is the Demo target.
 
 ## Update schedule
@@ -68,7 +68,7 @@
 
 - No manual "Refresh" buttons on Dashboard or Installed — every screen refreshes itself automatically after the operation that would make its data stale (install, uninstall, update). This supersedes the "Manual `Refresh` action" line that appeared in earlier update-schedule requirements.
 - **AUR helper build directory (`BuildDirectory` setting) is a future feature, not exposed in the current UI.** The underlying `SettingsViewModel.BuildDirectory` model field and `IBuildDirectoryPolicy` runtime wiring in `YayPackageBackend` (adds `--builddir` to install/update commands when configured) are kept intact so this can be reintroduced as a pure UI addition later, without a data-model change. Until then, it is always unset and has no effect on Install/Update behavior.
-- Notifications are surfaced as in-app toasts (bottom-right, auto-dismissing after 30s) in addition to the OS-level desktop notification `notify-send` already covered above — the toast overlay is not gated by the desktop-notifications setting, since it's a different, always-on in-app surface.
+- Notifications are surfaced as in-app toasts (bottom-right, auto-dismissing after **10 s**) in addition to the OS-level desktop notification `notify-send` already covered above — the toast overlay is not gated by the desktop-notifications setting, since it's a different, always-on in-app surface.
 
 ## Quality requirements
 

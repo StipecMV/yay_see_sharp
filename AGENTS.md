@@ -82,7 +82,7 @@ yay_see_sharp.domain       (modely + interfacy — ŽIADNE third-party závislos
 | Update check: pri štarte + denne o konfigurovateľnom čase (default 10:00) | ✅ potvrdené |
 | Testy: TUnit + Moq; mocks len na hraniciach (ICommandRunner, HTTP); destruktívne Arch testy cez env flag | ✅ potvrdené |
 
-## 6. ZAMIETNUTÉ / odložené rozhodnutia (NEVRAČAJ to späť bez diskusie s Miroslavom)
+## 6. ZAMIETNUTÉ / odložené rozhodnutia (NEVRAČAJ to späť bez diskusie so stakeholderom)
 
 - **In-app instalátor pre `paru`** — odložené: instalátor backendu ostáva yay-only (prompt texty sú yay-špecifické); pri chýbajúcom preferovanom paru sa ukáže lokalizovaná výstraha (`Dashboard.ParuMissingWarning`), paru sa nainštaluje `sudo pacman -S paru` (je v extra repo).
 - **`apt` backend v MVP** — ZAMIETNUTÉ (future; na Ubuntu ostáva Demo mode).

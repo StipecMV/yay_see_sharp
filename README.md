@@ -1,7 +1,7 @@
 # Yay See Sharp
 
 ![Build](https://img.shields.io/badge/build-passing-brightgreen)
-![Tests](https://img.shields.io/badge/tests-273%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-285%20passed-brightgreen)
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 ![Avalonia](https://img.shields.io/badge/Avalonia%20UI-12.x-6E40C9)
 ![License](https://img.shields.io/badge/license-GPL--3.0-blue)

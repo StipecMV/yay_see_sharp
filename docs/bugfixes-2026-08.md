@@ -1,6 +1,6 @@
 # Bugfix round — 2026-08 (live CachyOS feedback)
 
-All issues below were reported by Miroslav after exercising the **Real mode** backend on a live
+All issues below were reported by the stakeholder after exercising the **Real mode** backend on a live
 CachyOS desktop (2026-08): installing/uninstalling packages, switching filters, browsing Search /
 Installed / Settings. Every fix is covered by a unit or headless E2E regression test (273 tests
 passing after this round).
