@@ -31,7 +31,7 @@ YAY_SEE_SHARP_RUN_ARCH_INTEGRATION_TESTS=1 dotnet run --project tests/yay_see_sh
 ./tools/generate-screenshots.sh [--theme dark] [--lang sk]
 ```
 
-**Aktuálny stav (2026-08):** 285/285 testov zelených — 7 domain + 162 infrastructure + 104 application + 12 e2e.
+**Aktuálny stav (2026-08):** 290/290 testov zelených — 7 domain + 166 infrastructure + 105 application + 12 e2e.
 **Screenshoty** sa generujú z reálne skompilovanej aplikácie (Demo backend), nie ručne.
 
 ## 3. Architektúra (striktne jednosmerné závislosti)
